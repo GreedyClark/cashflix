@@ -1,0 +1,63 @@
+{% load static i18n %}<!doctype html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}CashFlix{% endblock %}</title>
+  <script src="{% static 'js/theme.js' %}"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{% static 'vendor/tabler/tabler.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/cashflix.css' %}">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="{% translate 'Розділи' %}">
+      <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
+      <nav class="side-menu">
+        {% for item in main_menu %}
+          {% if item.url %}
+            <a class="side-link{% if item.active %} active{% endif %}" href="{{ item.url }}"{% if item.active %} aria-current="page"{% endif %}>
+              <c-icon :name="item.icon" />{{ item.label }}
+            </a>
+          {% else %}
+            <span class="side-link disabled" aria-disabled="true" title="{% translate 'Скоро' %}">
+              <c-icon :name="item.icon" />{{ item.label }}
+            </span>
+          {% endif %}
+        {% endfor %}
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
+        <div class="top-actions">
+          <button class="icon-btn" type="button" data-theme-toggle aria-label="{% translate 'Перемкнути тему' %}">
+            <span class="theme-icon-dark"><c-icon name="sun" /></span>
+            <span class="theme-icon-light"><c-icon name="moon" /></span>
+          </button>
+        </div>
+      </header>
+
+      <main class="page">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <nav class="bottom-nav" aria-label="{% translate 'Розділи' %}">
+    {% for item in main_menu|slice:":4" %}
+      {% if item.url %}
+        <a class="{% if item.active %}active{% endif %}" href="{{ item.url }}"><c-icon :name="item.icon" /><span>{{ item.short }}</span></a>
+      {% else %}
+        <span class="disabled" aria-disabled="true"><c-icon :name="item.icon" /><span>{{ item.short }}</span></span>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
+</body>
+</html>

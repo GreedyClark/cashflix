@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Огляд" %} · CashFlix{% endblock %}
+
+{% block content %}
+  {% translate "Дашборд" as panel_title %}
+  {% translate "Тут з’явиться огляд бюджету" as empty_title %}
+
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{% now "F Y" %}</p>
+      <h1 class="page-title">{% translate "Огляд" %}</h1>
+    </div>
+    <div class="page-actions">
+      <button class="btn-cf primary" type="button" disabled><c-icon name="plus" />{% translate "Операція" %}</button>
+    </div>
+  </div>
+
+  <c-panel :title="panel_title">
+    <c-empty icon="report-money" :title="empty_title">
+      {% translate "Спершу додамо рахунки, категорії та операції. Після цього тут будуть баланс, витрати місяця, ліміти й цілі." %}
+    </c-empty>
+  </c-panel>
+{% endblock %}

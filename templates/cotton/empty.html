@@ -1,0 +1,7 @@
+<c-vars icon="receipt" title="" />
+<div class="empty">
+  <span class="empty-icon"><c-icon :name="icon" /></span>
+  <p class="empty-title">{{ title }}</p>
+  <p class="empty-text">{{ slot }}</p>
+  {% if action %}<div class="empty-action">{{ action }}</div>{% endif %}
+</div>

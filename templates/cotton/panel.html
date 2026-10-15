@@ -1,0 +1,13 @@
+<c-vars title="" subtitle="" />
+<section class="panel {{ class }}">
+  {% if title or actions %}
+    <header class="panel-head">
+      <div>
+        {% if title %}<h2 class="panel-title">{{ title }}</h2>{% endif %}
+        {% if subtitle %}<p class="panel-sub">{{ subtitle }}</p>{% endif %}
+      </div>
+      {% if actions %}<div class="panel-actions">{{ actions }}</div>{% endif %}
+    </header>
+  {% endif %}
+  <div class="panel-body">{{ slot }}</div>
+</section>
