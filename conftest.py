@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from django.contrib.auth import get_user_model
 
-from apps.households.services import create_household
+from apps.households.services import add_member, create_household
 from apps.money.models import Account, Category, ExchangeRate
 
 User = get_user_model()
@@ -19,6 +19,12 @@ def home(db):
 @pytest.fixture
 def yura(home):
     return home.memberships.get(user__email="yura@example.com")
+
+
+@pytest.fixture
+def olya(home):
+    user = User.objects.create_user(email="olya@example.com", password="pass12345")
+    return add_member(home, user)
 
 
 @pytest.fixture

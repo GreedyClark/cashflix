@@ -23,6 +23,9 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.households",
     "apps.money",
+    "apps.budgets",
+    "apps.recurring",
+    "apps.goals",
     "apps.core",
 ]
 
