@@ -60,3 +60,14 @@ def salary(home):
 @pytest.fixture
 def usd_rate(db):
     return ExchangeRate.objects.create(currency="USD", date=datetime.date(2026, 10, 1), rate=Decimal("41.32"))
+
+
+@pytest.fixture
+def user(db):
+    return User.objects.create_user(email="me@example.com", password="pass12345")
+
+
+@pytest.fixture
+def auth_client(client, user):
+    client.force_login(user)
+    return client

@@ -1,0 +1,14 @@
+{% for field in attrs.form %}
+  {% if field.is_hidden %}
+    {{ field }}
+  {% elif field.widget_type == "checkbox" %}
+    <label class="check-field" for="{{ field.id_for_label }}">{{ field }} <span>{{ field.label }}</span></label>
+  {% else %}
+    <div class="field{% if field.errors %} has-error{% endif %}">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      {% if field.help_text and field.name != "password1" %}<p class="field-help">{{ field.help_text|safe }}</p>{% endif %}
+    </div>
+  {% endif %}
+{% endfor %}

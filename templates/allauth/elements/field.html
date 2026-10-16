@@ -1,0 +1,7 @@
+{% load allauth %}
+<div class="field">
+  <label for="{{ attrs.id }}">{% slot label %}{% endslot %}</label>
+  <input{% if attrs.required %} required{% endif %}{% if attrs.disabled %} disabled{% endif %}{% if attrs.readonly %} readonly{% endif %}{% if attrs.name %} name="{{ attrs.name }}"{% endif %}{% if attrs.id %} id="{{ attrs.id }}"{% endif %}{% if attrs.placeholder %} placeholder="{{ attrs.placeholder }}"{% endif %}{% if attrs.autocomplete %} autocomplete="{{ attrs.autocomplete }}"{% endif %}{% if attrs.value is not None %} value="{{ attrs.value }}"{% endif %} type="{{ attrs.type }}">
+  {{ attrs.errors }}
+  {% if slots.help_text %}<p class="field-help">{% slot help_text %}{% endslot %}</p>{% endif %}
+</div>

@@ -452,3 +452,187 @@ a {
     transition: none !important;
   }
 }
+/* User chip */
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.avatar-cf {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cat-1);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@media (max-width: 575px) {
+  .user-name {
+    display: none;
+  }
+}
+
+/* Auth pages */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px));
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 24px auto 48px;
+  padding: 0 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.auth-text {
+  margin: 0;
+  color: var(--ink-subtle);
+}
+
+.auth-text a,
+.auth-form a {
+  color: var(--accent-hover);
+}
+
+.auth-divider {
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+}
+
+.auth-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.auth-actions .btn-cf {
+  width: 100%;
+  min-height: 40px;
+}
+
+.auth-messages {
+  display: grid;
+  gap: 8px;
+}
+
+/* Forms */
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-subtle);
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--ink);
+  font: 400 15px var(--font);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--accent);
+}
+
+.field.has-error input {
+  border-color: var(--crit);
+}
+
+.field-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--crit);
+}
+
+.field-help {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
+
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.check-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.alert-cf {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.alert-cf.error {
+  border-color: color-mix(in srgb, var(--crit) 40%, transparent);
+  color: var(--crit);
+}
+
+.alert-cf.success {
+  border-color: color-mix(in srgb, var(--good) 40%, transparent);
+  color: var(--good);
+}

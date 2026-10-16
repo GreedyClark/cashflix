@@ -1,0 +1,36 @@
+{% load static i18n %}<!doctype html>
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}" data-bs-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block head_title %}{% endblock head_title %} · CashFlix</title>
+  <script src="{% static 'js/theme.js' %}"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="{% static 'vendor/tabler/tabler.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/cashflix.css' %}">
+  {% block extra_head %}{% endblock extra_head %}
+</head>
+<body class="auth-page">
+  <header class="auth-top">
+    <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
+    <button class="icon-btn" type="button" data-theme-toggle aria-label="{% translate 'Перемкнути тему' %}">
+      <span class="theme-icon-dark"><c-icon name="sun" /></span>
+      <span class="theme-icon-light"><c-icon name="moon" /></span>
+    </button>
+  </header>
+
+  <main class="auth-card">
+    {% if messages %}
+      <div class="auth-messages">
+        {% for message in messages %}<p class="alert-cf {{ message.tags }}">{{ message }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    {% block body %}{% block content %}{% endblock content %}{% endblock body %}
+  </main>
+
+  {% block extra_body %}{% endblock extra_body %}
+</body>
+</html>
