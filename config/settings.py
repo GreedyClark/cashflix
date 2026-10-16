@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django_cotton",
     "apps.users",
     "apps.households",
+    "apps.money",
     "apps.core",
 ]
 

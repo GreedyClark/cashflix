@@ -22,6 +22,9 @@ def add_member(household, user, role=Membership.Role.MEMBER):
 
 @transaction.atomic
 def create_household(owner, name, base_currency="UAH"):
+    from apps.money.services import create_default_categories
+
     household = Household.objects.create(name=name, base_currency=base_currency)
     add_member(household, owner, role=Membership.Role.OWNER)
+    create_default_categories(household)
     return household
