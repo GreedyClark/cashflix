@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django_cotton",
     "apps.users",
+    "apps.households",
     "apps.core",
 ]
 
