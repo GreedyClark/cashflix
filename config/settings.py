@@ -22,6 +22,8 @@ INSTALLED_APPS = [
     "django_cotton",
     "allauth",
     "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "apps.users",
     "apps.households",
     "apps.money",
@@ -104,11 +106,29 @@ ACCOUNT_LOGOUT_REDIRECT_URL = "account_login"
 
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_LOGIN_METHODS = {"email"}
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-ACCOUNT_EMAIL_VERIFICATION = env("ACCOUNT_EMAIL_VERIFICATION", default="optional")
+ACCOUNT_SIGNUP_FIELDS = ["email*"]
+ACCOUNT_EMAIL_VERIFICATION = "none"
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_SESSION_REMEMBER = True
-ACCOUNT_LOGIN_ON_PASSWORD_RESET = True
+
+SOCIALACCOUNT_ONLY = True
+SOCIALACCOUNT_ADAPTER = "apps.users.adapters.SocialAccountAdapter"
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_STORE_TOKENS = False
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APPS": [
+            {
+                "client_id": env("GOOGLE_CLIENT_ID", default=""),
+                "secret": env("GOOGLE_CLIENT_SECRET", default=""),
+            },
+        ],
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"prompt": "select_account"},
+    },
+}
 
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="CashFlix <noreply@cashflix.local>")

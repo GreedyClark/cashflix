@@ -1,0 +1,81 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n socialaccount %}
+
+{% block head_title %}{% translate "Вхід" %}{% endblock head_title %}
+
+{% block body %}
+  <div class="login-layout">
+    <aside class="login-showcase" aria-hidden="true">
+      <a class="brand" href="{% url 'account_login' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
+
+      <div>
+        <h2 class="showcase-title">{% translate "Сімейний бюджет, який рахує сам" %}</h2>
+        <p class="showcase-text">{% translate "Витрати обох, ліміти на категорії, регулярні платежі й цілі в одному місці. Оплати Apple Pay потрапляють сюди автоматично." %}</p>
+
+        <div class="showcase-preview">
+          <div class="preview-card">
+            <div class="preview-label"><span>{% translate "Витрати місяця" %}</span><span class="delta good">↓ 8%</span></div>
+            <div class="preview-big num">22 189 ₴</div>
+            <svg class="preview-spark" viewBox="0 0 300 44" preserveAspectRatio="none">
+              <path class="spark-fill" d="M0 40 C30 38 50 34 80 31 S130 26 160 22 S210 16 240 12 S280 6 300 4 L300 44 L0 44Z" />
+              <path class="spark-line" d="M0 40 C30 38 50 34 80 31 S130 26 160 22 S210 16 240 12 S280 6 300 4" />
+            </svg>
+          </div>
+          <div class="preview-card shifted">
+            <div class="preview-row"><span class="preview-icon cat-1"><c-icon name="shopping-cart" /></span><div><div class="preview-name">{% translate "Продукти" %}</div><div class="preview-bar"><i class="ok w-78"></i></div></div><span class="num">2 150 ₴</span></div>
+            <div class="preview-row"><span class="preview-icon cat-2"><c-icon name="coffee" /></span><div><div class="preview-name">{% translate "Кафе" %}</div><div class="preview-bar"><i class="warn w-88"></i></div></div><span class="num">360 ₴</span></div>
+            <div class="preview-row"><span class="preview-icon cat-3"><c-icon name="car" /></span><div><div class="preview-name">{% translate "Транспорт" %}</div><div class="preview-bar"><i class="ok w-64"></i></div></div><span class="num">890 ₴</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="showcase-foot">
+        <span><c-icon name="lock" />{% translate "Без паролів" %}</span>
+        <span><c-icon name="users" />{% translate "Для всієї сім'ї" %}</span>
+        <span><c-icon name="currency-dollar" />{% translate "Гривня, долар, євро" %}</span>
+      </div>
+    </aside>
+
+    <section class="login-side">
+      <header class="auth-top">
+        <a class="brand login-mobile-brand" href="{% url 'account_login' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
+        <button class="icon-btn" type="button" data-theme-toggle aria-label="{% translate 'Перемкнути тему' %}">
+          <span class="theme-icon-dark"><c-icon name="sun" /></span>
+          <span class="theme-icon-light"><c-icon name="moon" /></span>
+        </button>
+      </header>
+
+      <main class="login-box">
+        {% if messages %}
+          <div class="auth-messages">
+            {% for message in messages %}<p class="alert-cf {{ message.tags }}">{{ message }}</p>{% endfor %}
+          </div>
+        {% endif %}
+
+        {% block login_intro %}
+          <div>
+            <h1 class="auth-title">{% translate "Вхід у CashFlix" %}</h1>
+            <p class="auth-text">{% translate "Увійдіть через Google. Якщо ви тут уперше, акаунт створиться автоматично." %}</p>
+          </div>
+        {% endblock login_intro %}
+
+        <form method="post" action="{% provider_login_url 'google' %}">
+          {% csrf_token %}
+          {{ redirect_field }}
+          <button class="google-btn" type="submit"><c-icon name="brand-google" />{% translate "Продовжити з Google" %}</button>
+        </form>
+
+        {% block login_extra %}
+          <hr class="auth-divider">
+          <ul class="login-points">
+            <li><c-icon name="check" />{% translate "Жодних паролів: вхід тим самим акаунтом, що й пошта" %}</li>
+            <li><c-icon name="check" />{% translate "Спільний бюджет із партнером за посиланням-запрошенням" %}</li>
+            <li><c-icon name="check" />{% translate "Дані бачать лише учасники вашого господарства" %}</li>
+          </ul>
+        {% endblock login_extra %}
+
+        <p class="login-fine">{% translate "Ми отримаємо від Google лише ваше ім'я та email." %}</p>
+      </main>
+    </section>
+  </div>
+{% endblock body %}
