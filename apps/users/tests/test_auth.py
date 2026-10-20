@@ -66,7 +66,8 @@ def test_logout(auth_client):
     assert auth_client.get(reverse("core:home")).status_code == 302
 
 
-def test_home_shows_user_name(auth_client, user):
-    response = auth_client.get(reverse("core:home"))
+def test_home_shows_user_and_logout_button(auth_client, user):
+    html = auth_client.get(reverse("core:home")).content.decode()
 
-    assert user.name in response.content.decode()
+    assert f'<span class="user-name">{user.name}</span>' in html
+    assert reverse("account_logout") in html

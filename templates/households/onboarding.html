@@ -1,0 +1,50 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Нове господарство" %}{% endblock head_title %}
+
+{% block content %}
+  <div class="onboard-steps" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></div>
+
+  <div class="who-card">
+    <span class="avatar-cf">{{ user.initial }}</span>
+    <div>
+      <div class="who-name">{{ user.name }}</div>
+      <div class="who-meta">{{ user.email }}</div>
+    </div>
+    <form method="post" action="{% url 'account_logout' %}">
+      {% csrf_token %}
+      <button class="link-btn" type="submit">{% translate "Не ви?" %}</button>
+    </form>
+  </div>
+
+  <div>
+    <h1 class="auth-title">{% translate "Створіть своє господарство" %}</h1>
+    <p class="auth-text">{% translate "Це спільний простір для бюджету. Пізніше ви зможете запросити туди партнера." %}</p>
+  </div>
+
+  <form class="auth-form" method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="field{% if form.name.errors %} has-error{% endif %}">
+      <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+      {{ form.name }}
+      {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    <fieldset class="field">
+      <legend>{{ form.base_currency.label }}</legend>
+      <div class="choice-seg">
+        {% for radio in form.base_currency %}
+          <label class="choice">{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <div class="auth-actions">
+      <button class="btn-cf primary" type="submit">{% translate "Створити й почати" %}</button>
+    </div>
+  </form>
+
+  <p class="login-fine">{% translate "Створимо стандартні категорії: продукти, кафе, транспорт тощо. Їх можна змінити будь-коли." %}</p>
+{% endblock content %}

@@ -68,6 +68,17 @@ def user(db):
 
 
 @pytest.fixture
-def auth_client(client, user):
+def user_household(user):
+    return create_household(user, "Мій дім")
+
+
+@pytest.fixture
+def auth_client(client, user, user_household):
+    client.force_login(user)
+    return client
+
+
+@pytest.fixture
+def newcomer_client(client, user):
     client.force_login(user)
     return client
