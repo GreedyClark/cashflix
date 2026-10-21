@@ -18,12 +18,22 @@ def next_color_slot(household):
 
 
 def add_member(household, user, role=Membership.Role.MEMBER):
-    membership, _ = Membership.objects.get_or_create(
+    membership, created = Membership.objects.get_or_create(
         household=household,
         user=user,
         defaults={"role": role, "color_slot": next_color_slot(household)},
     )
+    if not created and membership.left_at:
+        membership.left_at = None
+        membership.save(update_fields=["left_at"])
     return membership
+
+
+def remove_member(membership):
+    if membership.is_owner:
+        raise ValueError("Owner cannot leave the household")
+    membership.left_at = timezone.now()
+    membership.save(update_fields=["left_at"])
 
 
 @transaction.atomic
@@ -76,4 +86,10 @@ def month_spending(household, today=None):
     for segment in segments:
         segment["percent"] = round(segment["amount"] / total * 100) if total else 0
 
-    return {"memberships": memberships, "segments": segments, "total": total, "month": month_start}
+    return {
+        "memberships": [m for m in memberships if m.is_active],
+        "former_members": [m for m in memberships if not m.is_active],
+        "segments": segments,
+        "total": total,
+        "month": month_start,
+    }

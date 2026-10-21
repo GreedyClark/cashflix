@@ -45,9 +45,26 @@
         <article class="member-card">
           <div class="member-card-top">
             <span class="avatar-cf lg color-{{ membership.color_slot }}">{{ membership.user.initial }}</span>
-            <span class="role-cf{% if membership.is_owner %} owner{% endif %}">
-              {% if membership.is_owner %}<c-icon name="crown" />{% endif %}{{ membership.get_role_display }}
-            </span>
+            <div class="member-card-actions">
+              <span class="role-cf{% if membership.is_owner %} owner{% endif %}">
+                {% if membership.is_owner %}<c-icon name="crown" />{% endif %}{{ membership.get_role_display }}
+              </span>
+              {% if is_owner and not membership.is_owner %}
+                <details class="menu-cf">
+                  <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+                  <div class="menu-pop">
+                    <button class="menu-item danger" type="button" data-dialog-open="#remove-{{ membership.pk }}"><c-icon name="user-minus" />{% translate "Видалити з сім'ї" %}</button>
+                  </div>
+                </details>
+              {% elif membership == request.membership and not membership.is_owner %}
+                <details class="menu-cf">
+                  <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+                  <div class="menu-pop">
+                    <button class="menu-item danger" type="button" data-dialog-open="#leave"><c-icon name="door-exit" />{% translate "Вийти з сім'ї" %}</button>
+                  </div>
+                </details>
+              {% endif %}
+            </div>
           </div>
           <div>
             <div class="member-name">
@@ -62,6 +79,20 @@
             <div><dt>{% translate "У сім'ї з" %}</dt><dd>{{ membership.joined_at|date:"j E" }}</dd></div>
           </dl>
         </article>
+
+        {% if is_owner and not membership.is_owner %}
+          <dialog class="dialog-cf" id="remove-{{ membership.pk }}">
+            <form method="post" action="{% url 'households:member_remove' membership.pk %}">
+              {% csrf_token %}
+              <h2 class="dialog-title">{% translate "Видалити з сім'ї?" %}</h2>
+              <p class="dialog-text">{% blocktranslate with name=membership.user.name %}{{ name }} одразу втратить доступ до бюджету. Операції залишаться в історії, тож підсумки минулих місяців не зміняться. Повернути можна новим запрошенням.{% endblocktranslate %}</p>
+              <div class="dialog-actions">
+                <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+                <button class="btn-cf danger" type="submit">{% translate "Видалити" %}</button>
+              </div>
+            </form>
+          </dialog>
+        {% endif %}
       {% endfor %}
 
       {% if is_owner %}
@@ -97,5 +128,41 @@
         {% endif %}
       {% endif %}
     </div>
+
+    {% if former_members %}
+      <section class="panel">
+        <header class="panel-head">
+          <div>
+            <h2 class="panel-title">{% translate "Колишні учасники" %}</h2>
+            <p class="panel-sub">{% translate "Їхні операції залишились в історії. Щоб повернути людину, надішліть нове запрошення." %}</p>
+          </div>
+        </header>
+        <div class="panel-body">
+          <ul class="former-list">
+            {% for membership in former_members %}
+              <li>
+                <span class="avatar-cf faded color-{{ membership.color_slot }}">{{ membership.user.initial }}</span>
+                <span class="former-name">{{ membership.user.name }}</span>
+                <span class="former-meta">{% blocktranslate with date=membership.left_at|date:"j E" %}не в сім'ї з {{ date }}{% endblocktranslate %}</span>
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </section>
+    {% endif %}
   </div>
+
+  {% if not is_owner %}
+    <dialog class="dialog-cf" id="leave">
+      <form method="post" action="{% url 'households:leave' %}">
+        {% csrf_token %}
+        <h2 class="dialog-title">{% blocktranslate with name=request.household.name %}Вийти із сім'ї «{{ name }}»?{% endblocktranslate %}</h2>
+        <p class="dialog-text">{% translate "Ви втратите доступ до спільного бюджету. Ваші операції залишаться в історії сім'ї. Повернутися можна за новим запрошенням." %}</p>
+        <div class="dialog-actions">
+          <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+          <button class="btn-cf danger" type="submit">{% translate "Вийти" %}</button>
+        </div>
+      </form>
+    </dialog>
+  {% endif %}
 {% endblock %}

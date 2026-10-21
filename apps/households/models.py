@@ -16,7 +16,7 @@ class Currency(models.TextChoices):
 
 class HouseholdQuerySet(models.QuerySet):
     def for_user(self, user):
-        return self.filter(memberships__user=user)
+        return self.filter(memberships__user=user, memberships__left_at__isnull=True)
 
 
 class Household(models.Model):
@@ -34,6 +34,14 @@ class Household(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class MembershipQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(left_at__isnull=True)
+
+    def former(self):
+        return self.filter(left_at__isnull=False)
 
 
 class Membership(models.Model):
@@ -55,6 +63,9 @@ class Membership(models.Model):
     role = models.CharField(_("роль"), max_length=10, choices=Role.choices, default=Role.MEMBER)
     color_slot = models.PositiveSmallIntegerField(_("колір"), default=1)
     joined_at = models.DateTimeField(_("приєднався"), auto_now_add=True)
+    left_at = models.DateTimeField(_("вийшов"), null=True, blank=True)
+
+    objects = MembershipQuerySet.as_manager()
 
     class Meta:
         verbose_name = _("учасник")
@@ -66,6 +77,10 @@ class Membership(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.household}"
+
+    @property
+    def is_active(self):
+        return self.left_at is None
 
     @property
     def is_owner(self):

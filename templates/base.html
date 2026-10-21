@@ -21,7 +21,7 @@
           <span class="side-household-label">{% translate "Сім'я" %}</span>
           <span class="side-household-name">{{ request.household.name }}</span>
           <span class="side-household-members">
-            {% for membership in request.household.memberships.all %}<span class="avatar-cf mini color-{{ membership.color_slot }}" title="{{ membership.user.name }}">{{ membership.user.initial }}</span>{% endfor %}
+            {% for membership in request.household.active_members %}<span class="avatar-cf mini color-{{ membership.color_slot }}" title="{{ membership.user.name }}">{{ membership.user.initial }}</span>{% endfor %}
             <c-icon name="user-plus" />
           </span>
         </a>
@@ -82,5 +82,6 @@
 
   <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
   <script src="{% static 'js/copy.js' %}" defer></script>
+  <script src="{% static 'js/dialog.js' %}" defer></script>
 </body>
 </html>
