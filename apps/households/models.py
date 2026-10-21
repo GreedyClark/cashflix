@@ -1,5 +1,10 @@
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.db import models
+from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
@@ -69,3 +74,64 @@ class Membership(models.Model):
     @property
     def color_var(self):
         return f"--cat-{self.color_slot}"
+
+
+def make_token():
+    return secrets.token_urlsafe(16)
+
+
+def default_expiry():
+    return timezone.now() + timedelta(days=Invitation.LIFETIME_DAYS)
+
+
+class InvitationQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(accepted_at__isnull=True, is_revoked=False, expires_at__gt=timezone.now())
+
+
+class Invitation(models.Model):
+    LIFETIME_DAYS = 7
+
+    household = models.ForeignKey(
+        Household, on_delete=models.CASCADE, related_name="invitations", verbose_name=_("господарство")
+    )
+    token = models.CharField(max_length=32, unique=True, default=make_token, editable=False)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_invitations",
+        verbose_name=_("хто запросив"),
+    )
+    created_at = models.DateTimeField(_("створено"), auto_now_add=True)
+    expires_at = models.DateTimeField(_("діє до"), default=default_expiry)
+    is_revoked = models.BooleanField(_("скасовано"), default=False)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="accepted_invitations",
+        verbose_name=_("хто приєднався"),
+    )
+    accepted_at = models.DateTimeField(_("приєднався"), null=True, blank=True)
+
+    objects = InvitationQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _("запрошення")
+        verbose_name_plural = _("запрошення")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.household} ({self.token[:6]}…)"
+
+    def get_absolute_url(self):
+        return reverse("households:join", args=[self.token])
+
+    @property
+    def is_active(self):
+        return self.accepted_at is None and not self.is_revoked and self.expires_at > timezone.now()
+
+    @property
+    def days_left(self):
+        return max(0, (self.expires_at - timezone.now()).days)

@@ -1,0 +1,14 @@
+{% extends "account/login.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Запрошення" %}{% endblock head_title %}
+
+{% block login_intro %}
+  <c-invite-card :inviter="inviter" :household="household" />
+  <div>
+    <h1 class="auth-title">{% translate "Приєднатися до сім'ї" %}</h1>
+    <p class="auth-text">{% blocktranslate with name=household.name count days=invitation.days_left %}Увійдіть через Google, і ви одразу потрапите в «{{ name }}». Запрошення діє ще {{ days }} день.{% plural %}Увійдіть через Google, і ви одразу потрапите в «{{ name }}». Запрошення діє ще {{ days }} дн.{% endblocktranslate %}</p>
+  </div>
+{% endblock login_intro %}
+
+{% block login_extra %}{% endblock login_extra %}

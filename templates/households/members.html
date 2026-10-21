@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load i18n money %}
+
+{% block title %}{% translate "Сім'я" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{% translate "Сім'я" %}</p>
+      <h1 class="page-title">{{ request.household.name }}</h1>
+      <p class="page-meta">
+        {% blocktranslate count counter=memberships|length %}{{ counter }} учасник{% plural %}{{ counter }} учасники{% endblocktranslate %}
+        · {% translate "основна валюта" %} {{ request.household.get_base_currency_display|lower }}
+      </p>
+    </div>
+  </div>
+
+  <div class="family-layout">
+    <section class="panel spend-split">
+      <div class="panel-body">
+        <p class="eyebrow">{% blocktranslate with month=month|date:"F"|lower %}Витрати за {{ month }}{% endblocktranslate %}</p>
+        <div class="split-total num">{{ total|money:request.household.base_currency }}</div>
+        {% if segments %}
+          <div class="split-bar" role="img" aria-label="{% translate 'Хто скільки витратив' %}">
+            {% for segment in segments %}<i class="{{ segment.color }}" style="flex-grow: {{ segment.percent }}"></i>{% endfor %}
+          </div>
+          <ul class="split-legend">
+            {% for segment in segments %}
+              <li>
+                <span class="dot {{ segment.color }}"></span>
+                <span class="split-name">{{ segment.name }}</span>
+                <span class="num">{{ segment.amount|money:request.household.base_currency }}</span>
+                <span class="split-percent num">{{ segment.percent }}%</span>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="panel-text">{% translate "Цього місяця витрат ще немає. Коли з'являться операції, тут буде видно, хто скільки витратив." %}</p>
+        {% endif %}
+      </div>
+    </section>
+
+    <div class="member-grid">
+      {% for membership in memberships %}
+        <article class="member-card">
+          <div class="member-card-top">
+            <span class="avatar-cf lg color-{{ membership.color_slot }}">{{ membership.user.initial }}</span>
+            <span class="role-cf{% if membership.is_owner %} owner{% endif %}">
+              {% if membership.is_owner %}<c-icon name="crown" />{% endif %}{{ membership.get_role_display }}
+            </span>
+          </div>
+          <div>
+            <div class="member-name">
+              {{ membership.user.name }}
+              {% if membership.user == request.user %}<span class="tag-cf">{% translate "це ви" %}</span>{% endif %}
+            </div>
+            <div class="member-meta">{{ membership.user.email }}</div>
+          </div>
+          <dl class="member-stats">
+            <div><dt>{% translate "Витрати" %}</dt><dd class="num">{{ membership.spent|money:request.household.base_currency }}</dd></div>
+            <div><dt>{% translate "Операцій" %}</dt><dd class="num">{{ membership.operations }}</dd></div>
+            <div><dt>{% translate "У сім'ї з" %}</dt><dd>{{ membership.joined_at|date:"j E" }}</dd></div>
+          </dl>
+        </article>
+      {% endfor %}
+
+      {% if is_owner %}
+        {% if invitation %}
+          <article class="member-card invite-ready">
+            <div class="member-card-top">
+              <span class="invite-icon"><c-icon name="link" /></span>
+              <span class="role-cf">{% blocktranslate count days=invitation.days_left %}ще {{ days }} день{% plural %}ще {{ days }} дн.{% endblocktranslate %}</span>
+            </div>
+            <div>
+              <div class="member-name">{% translate "Посилання готове" %}</div>
+              <div class="member-meta wrap">{% translate "Одноразове. Надішліть його в будь-якому месенджері." %}</div>
+            </div>
+            <div class="copy-box">
+              <input class="copy-input" id="invite-url" type="text" value="{{ invite_url }}" readonly aria-label="{% translate 'Посилання-запрошення' %}">
+              <button class="btn-cf" type="button" data-copy="#invite-url" data-copied="{% translate 'Скопійовано' %}"><c-icon name="copy" /><span>{% translate "Копіювати" %}</span></button>
+            </div>
+            <form method="post" action="{% url 'households:invitation_revoke' %}">
+              {% csrf_token %}
+              <button class="link-btn" type="submit">{% translate "Скасувати посилання" %}</button>
+            </form>
+          </article>
+        {% else %}
+          <form class="member-card invite-slot" method="post" action="{% url 'households:invitation_create' %}">
+            {% csrf_token %}
+            <span class="invite-icon"><c-icon name="user-plus" /></span>
+            <div>
+              <div class="member-name">{% translate "Запросити в сім'ю" %}</div>
+              <div class="member-meta wrap">{% translate "Створимо одноразове посилання на 7 днів. Людина увійде через Google і одразу побачить ваш бюджет." %}</div>
+            </div>
+            <button class="btn-cf primary" type="submit"><c-icon name="plus" />{% translate "Створити посилання" %}</button>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

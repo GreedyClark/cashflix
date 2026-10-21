@@ -14,17 +14,31 @@
 
         <div class="showcase-preview">
           <div class="preview-card">
-            <div class="preview-label"><span>{% translate "Витрати місяця" %}</span><span class="delta good">↓ 8%</span></div>
+            <div class="preview-label"><span>{% translate "Витрати за жовтень" %}</span><span class="delta good">↓ 8%</span></div>
             <div class="preview-big num">22 189 ₴</div>
+            <div class="preview-split"><i class="color-1 w-46"></i><i class="color-2 w-36"></i><i class="color-shared w-18"></i></div>
+            <div class="preview-legend">
+              <span><i class="dot color-1"></i>{% translate "Юра" %}</span>
+              <span><i class="dot color-2"></i>{% translate "Олічка" %}</span>
+              <span><i class="dot color-shared"></i>{% translate "Спільне" %}</span>
+            </div>
             <svg class="preview-spark" viewBox="0 0 300 44" preserveAspectRatio="none">
               <path class="spark-fill" d="M0 40 C30 38 50 34 80 31 S130 26 160 22 S210 16 240 12 S280 6 300 4 L300 44 L0 44Z" />
               <path class="spark-line" d="M0 40 C30 38 50 34 80 31 S130 26 160 22 S210 16 240 12 S280 6 300 4" />
             </svg>
           </div>
           <div class="preview-card shifted">
-            <div class="preview-row"><span class="preview-icon cat-1"><c-icon name="shopping-cart" /></span><div><div class="preview-name">{% translate "Продукти" %}</div><div class="preview-bar"><i class="ok w-78"></i></div></div><span class="num">2 150 ₴</span></div>
-            <div class="preview-row"><span class="preview-icon cat-2"><c-icon name="coffee" /></span><div><div class="preview-name">{% translate "Кафе" %}</div><div class="preview-bar"><i class="warn w-88"></i></div></div><span class="num">360 ₴</span></div>
-            <div class="preview-row"><span class="preview-icon cat-3"><c-icon name="car" /></span><div><div class="preview-name">{% translate "Транспорт" %}</div><div class="preview-bar"><i class="ok w-64"></i></div></div><span class="num">890 ₴</span></div>
+            <div class="preview-row"><span class="preview-icon cat-1"><c-icon name="shopping-cart" /></span><div><div class="preview-name">{% translate "Продукти" %}</div><div class="preview-bar"><i class="ok w-78"></i></div></div><span class="num">{% translate "2 150 ₴ лишилось" %}</span></div>
+            <div class="preview-row"><span class="preview-icon cat-2"><c-icon name="coffee" /></span><div><div class="preview-name">{% translate "Кафе" %}</div><div class="preview-bar"><i class="warn w-88"></i></div></div><span class="num">{% translate "360 ₴ лишилось" %}</span></div>
+            <div class="preview-row"><span class="preview-icon cat-3"><c-icon name="car" /></span><div><div class="preview-name">{% translate "Транспорт" %}</div><div class="preview-bar"><i class="ok w-64"></i></div></div><span class="num">{% translate "890 ₴ лишилось" %}</span></div>
+          </div>
+          <div class="preview-toast">
+            <span class="avatar-cf color-2">О</span>
+            <div>
+              <div class="preview-name">{% translate "Олічка · Сільпо" %}</div>
+              <div class="preview-meta">{% translate "Apple Pay · щойно" %}</div>
+            </div>
+            <span class="num">−486 ₴</span>
           </div>
         </div>
       </div>
@@ -70,7 +84,7 @@
           <ul class="login-points">
             <li><c-icon name="check" />{% translate "Жодних паролів: вхід тим самим акаунтом, що й пошта" %}</li>
             <li><c-icon name="check" />{% translate "Спільний бюджет із партнером за посиланням-запрошенням" %}</li>
-            <li><c-icon name="check" />{% translate "Дані бачать лише учасники вашого господарства" %}</li>
+            <li><c-icon name="check" />{% translate "Дані бачить лише ваша сім'я" %}</li>
           </ul>
         {% endblock login_extra %}
 

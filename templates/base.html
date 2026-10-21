@@ -17,10 +17,14 @@
     <aside class="sidebar" aria-label="{% translate 'Розділи' %}">
       <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
       {% if request.household %}
-        <div class="side-household">
-          <div class="side-household-label">{% translate "Господарство" %}</div>
-          <div class="side-household-name">{{ request.household.name }}</div>
-        </div>
+        <a class="side-household" href="{% url 'households:members' %}" title="{% translate "Сім'я" %}">
+          <span class="side-household-label">{% translate "Сім'я" %}</span>
+          <span class="side-household-name">{{ request.household.name }}</span>
+          <span class="side-household-members">
+            {% for membership in request.household.memberships.all %}<span class="avatar-cf mini color-{{ membership.color_slot }}" title="{{ membership.user.name }}">{{ membership.user.initial }}</span>{% endfor %}
+            <c-icon name="user-plus" />
+          </span>
+        </a>
       {% endif %}
       <nav class="side-menu">
         {% for item in main_menu %}
@@ -46,7 +50,7 @@
             <span class="theme-icon-light"><c-icon name="moon" /></span>
           </button>
           {% if user.is_authenticated %}
-            <span class="user-chip" title="{{ user.email }}"><span class="avatar-cf">{{ user.initial }}</span><span class="user-name">{{ user.name }}</span></span>
+            <a class="user-chip" href="{% url 'households:members' %}" title="{{ user.email }}"><span class="avatar-cf{% if request.membership %} color-{{ request.membership.color_slot }}{% endif %}">{{ user.initial }}</span><span class="user-name">{{ user.name }}</span></a>
             <form method="post" action="{% url 'account_logout' %}">
               {% csrf_token %}
               <button class="icon-btn" type="submit" aria-label="{% translate 'Вийти' %}" title="{% translate 'Вийти' %}"><c-icon name="logout" /></button>
@@ -56,6 +60,11 @@
       </header>
 
       <main class="page">
+        {% if messages %}
+          <div class="page-messages">
+            {% for message in messages %}<p class="alert-cf {{ message.tags }}">{{ message }}</p>{% endfor %}
+          </div>
+        {% endif %}
         {% block content %}{% endblock %}
       </main>
     </div>
@@ -72,5 +81,6 @@
   </nav>
 
   <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/copy.js' %}" defer></script>
 </body>
 </html>

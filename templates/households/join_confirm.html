@@ -1,0 +1,34 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Запрошення" %}{% endblock head_title %}
+
+{% block content %}
+  <c-invite-card :inviter="inviter" :household="household" />
+
+  <div>
+    <h1 class="auth-title">{% blocktranslate with name=household.name %}Приєднатися до сім'ї «{{ name }}»?{% endblocktranslate %}</h1>
+    <p class="auth-text">
+      {% if request.household %}
+        {% blocktranslate with current=request.household.name %}Ваша сім'я «{{ current }}» залишиться, ви зможете перемикатися між ними.{% endblocktranslate %}
+      {% else %}
+        {% translate "Ви побачите спільні рахунки, операції, ліміти й цілі цієї сім'ї." %}
+      {% endif %}
+    </p>
+  </div>
+
+  <form class="auth-form" method="post">
+    {% csrf_token %}
+    <div class="who-card">
+      <span class="avatar-cf">{{ user.initial }}</span>
+      <div>
+        <div class="who-name">{{ user.name }}</div>
+        <div class="who-meta">{{ user.email }}</div>
+      </div>
+    </div>
+    <div class="auth-actions">
+      <button class="btn-cf primary" type="submit">{% translate "Приєднатися" %}</button>
+      <a class="btn-cf" href="{% url 'core:home' %}">{% translate "Не зараз" %}</a>
+    </div>
+  </form>
+{% endblock content %}

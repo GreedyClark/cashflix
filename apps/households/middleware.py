@@ -1,3 +1,4 @@
+from django.db.models import prefetch_related_objects
 from django.shortcuts import redirect
 from django.urls import reverse
 
@@ -18,6 +19,7 @@ class CurrentHouseholdMiddleware:
         if request.user.is_authenticated:
             membership = self.find_membership(request)
             if membership:
+                prefetch_related_objects([membership.household], "memberships__user")
                 request.membership = membership
                 request.household = membership.household
                 request.session[SESSION_KEY] = membership.household_id

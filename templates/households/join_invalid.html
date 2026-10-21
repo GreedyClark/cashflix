@@ -1,0 +1,15 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Запрошення недійсне" %}{% endblock head_title %}
+
+{% block content %}
+  <div class="empty">
+    <span class="empty-icon"><c-icon name="clock" /></span>
+    <p class="empty-title">{% translate "Запрошення недійсне" %}</p>
+    <p class="empty-text">{% translate "Посилання вже використали, скасували або минув його термін. Попросіть надіслати нове." %}</p>
+    <div class="empty-action">
+      <a class="btn-cf" href="{% url 'core:home' %}">{% translate "На головну" %}</a>
+    </div>
+  </div>
+{% endblock content %}

@@ -1,0 +1,11 @@
+{% load i18n %}
+<div class="invite-card">
+  <div class="invite-avatars">
+    <span class="avatar-cf">{{ inviter.initial }}</span>
+    <span class="avatar-cf ghost">?</span>
+  </div>
+  <div>
+    <div class="invite-title">{% blocktranslate with who=inviter.name name=household.name %}{{ who }} запрошує вас у сім'ю «{{ name }}»{% endblocktranslate %}</div>
+    <div class="invite-meta">{% translate "Спільні рахунки, ліміти й цілі" %}</div>
+  </div>
+</div>

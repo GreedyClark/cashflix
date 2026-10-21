@@ -1,7 +1,7 @@
 {% extends "allauth/layouts/base.html" %}
 {% load i18n %}
 
-{% block head_title %}{% translate "Нове господарство" %}{% endblock head_title %}
+{% block head_title %}{% translate "Нова сім'я" %}{% endblock head_title %}
 
 {% block content %}
   <div class="onboard-steps" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i></div>
@@ -19,8 +19,8 @@
   </div>
 
   <div>
-    <h1 class="auth-title">{% translate "Створіть своє господарство" %}</h1>
-    <p class="auth-text">{% translate "Це спільний простір для бюджету. Пізніше ви зможете запросити туди партнера." %}</p>
+    <h1 class="auth-title">{% translate "Як назвемо вашу сім'ю?" %}</h1>
+    <p class="auth-text">{% translate "Це ваш спільний бюджет. Пізніше ви зможете запросити туди партнера." %}</p>
   </div>
 
   <form class="auth-form" method="post" novalidate>
