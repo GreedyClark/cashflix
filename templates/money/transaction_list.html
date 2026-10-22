@@ -9,6 +9,9 @@
       <p class="eyebrow">{{ request.household.name }}</p>
       <h1 class="page-title">{% translate "Операції" %}</h1>
     </div>
+    <div class="page-actions">
+      <button class="btn-cf primary" type="button" hx-get="{% url 'money:transaction_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Операція" %}</button>
+    </div>
   </div>
 
   <form class="filter-bar" id="tx-filter" method="get"
@@ -31,11 +34,19 @@
     </div>
   </form>
 
-  <div id="tx-results" class="tx-results">
+  <div id="tx-results" class="tx-results"
+       hx-get="{% url 'money:transactions' %}" hx-trigger="transactionsChanged from:body" hx-include="#tx-filter">
     {% include "money/_transaction_results.html" %}
   </div>
+
+  <button class="fab" type="button" hx-get="{% url 'money:transaction_create' %}" hx-target="#tx-dialog-body" aria-label="{% translate 'Нова операція' %}"><c-icon name="plus" /></button>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Операція' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
 {% endblock %}
 
 {% block scripts %}
   <script src="{% static 'js/filters.js' %}" defer></script>
+  <script src="{% static 'js/transactions.js' %}" defer></script>
 {% endblock %}

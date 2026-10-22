@@ -31,3 +31,35 @@ def create_default_categories(household):
                 Category(household=household, kind=kind, name=name, icon=icon, color_slot=color, order=order)
             )
     return Category.objects.bulk_create(rows)
+
+
+SNAPSHOT_FIELDS = [
+    "type", "date", "title", "note", "account_id", "amount", "currency", "rate", "amount_base",
+    "to_account_id", "to_amount", "category_id", "member_id", "source", "created_by_id", "created_at",
+]
+
+
+def snapshot(transaction):
+    data = {name: getattr(transaction, name) for name in SNAPSHOT_FIELDS}
+    data = {name: str(value) if value is not None else None for name, value in data.items()}
+    data["pk"] = transaction.pk
+    data["household_id"] = transaction.household_id
+    return data
+
+
+def restore(household, data):
+    from .models import Transaction
+
+    pk = data["pk"]
+    if data["household_id"] != household.pk or household.transactions.filter(pk=pk).exists():
+        return None
+    transaction = Transaction(pk=pk, household=household)
+    for field in Transaction._meta.concrete_fields:
+        if field.attname in data:
+            value = data[field.attname]
+            setattr(transaction, field.attname, None if value is None else field.to_python(value))
+    created_at = transaction.created_at
+    transaction.save()
+    Transaction.objects.filter(pk=pk).update(created_at=created_at)
+    transaction.created_at = created_at
+    return transaction

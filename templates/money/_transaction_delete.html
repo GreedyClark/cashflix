@@ -1,0 +1,13 @@
+{% load i18n money %}
+<form class="confirm-cf" hx-post="{% url 'money:transaction_delete' transaction.pk %}" hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <h2 class="dialog-title">{% translate "Видалити операцію?" %}</h2>
+  <p class="dialog-text">
+    «{{ transaction.title }}», {% if transaction.type == "expense" %}−{% elif transaction.type == "income" %}+{% endif %}{{ transaction.amount|money:transaction.currency }}, {{ transaction.date|day_label|lower }}.
+    {% translate "Підсумки місяця перерахуються." %}
+  </p>
+  <div class="dialog-actions">
+    <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+    <button class="btn-cf danger" type="submit">{% translate "Видалити" %}</button>
+  </div>
+</form>

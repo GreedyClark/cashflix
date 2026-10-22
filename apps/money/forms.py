@@ -1,11 +1,12 @@
 import datetime
+from decimal import Decimal
 
 from django import forms
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .models import Category, Transaction
+from .models import Account, Category, Transaction
 
 
 def month_start(value):
@@ -140,3 +141,89 @@ def menu(name, icon, placeholder, options, align="start"):
         "options": options,
         "align": align,
     }
+
+
+class TransactionForm(forms.ModelForm):
+    amount = forms.DecimalField(
+        label=_("Сума"),
+        localize=True,
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+        error_messages={"min_value": _("Вкажіть суму більше нуля.")},
+        widget=forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off", "placeholder": "0"}),
+    )
+    member = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
+
+    class Meta:
+        model = Transaction
+        fields = ["type", "amount", "title", "category", "account", "to_account", "member", "date", "note"]
+        widgets = {
+            "type": forms.RadioSelect,
+            "title": forms.TextInput(attrs={"placeholder": _("Наприклад, Сільпо"), "autocomplete": "off"}),
+            "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "note": forms.Textarea(attrs={"rows": 2, "placeholder": _("Нотатка, необов'язково")}),
+        }
+        error_messages = {
+            "title": {"required": _("Вкажіть назву, наприклад «Сільпо».")},
+            "account": {"required": _("Оберіть рахунок.")},
+        }
+
+    def __init__(self, *args, household, membership, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.household = household
+        self.fields["category"].queryset = household.categories.filter(is_archived=False)
+        self.fields["account"].queryset = household.accounts.filter(is_archived=False)
+        self.fields["to_account"].queryset = household.accounts.filter(is_archived=False)
+        self.fields["member"].queryset = household.memberships.active().select_related("user")
+
+        if self.instance.pk:
+            self.initial["amount"] = format_amount(self.instance.amount)
+        else:
+            self.initial.setdefault("member", membership)
+            self.initial.setdefault("account", default_account(household, membership))
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("type") == Transaction.Type.TRANSFER:
+            cleaned["category"] = None
+            self.instance.category = None
+        else:
+            cleaned["to_account"] = None
+            self.instance.to_account = None
+        return cleaned
+
+    def save(self, commit=True):
+        if self.instance.pk and {"date", "account"} & set(self.changed_data):
+            self.instance.rate = None
+            self.instance.to_amount = None
+        return super().save(commit)
+
+    def category_options(self):
+        return self.pills("category")
+
+    def account_options(self):
+        return self.pills("account")
+
+    def to_account_options(self):
+        return self.pills("to_account")
+
+    def member_options(self):
+        return self.pills("member")
+
+    def pills(self, name):
+        selected = str(self[name].value() or "")
+        return [{"object": obj, "checked": str(obj.pk) == selected} for obj in self.fields[name].queryset]
+
+
+def format_amount(value):
+    text = f"{value:f}"
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text.replace(".", ",")
+
+
+def default_account(household, membership):
+    accounts = household.accounts.filter(is_archived=False)
+    cards = accounts.filter(kind=Account.Kind.CARD)
+    return cards.filter(owner=membership).first() or cards.first() or accounts.first()

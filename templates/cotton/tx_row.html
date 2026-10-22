@@ -1,6 +1,7 @@
 {% load i18n money %}
 <c-vars tx />
-<li class="tx">
+<li class="tx" role="button" tabindex="0"
+    hx-get="{% url 'money:transaction_edit' tx.pk %}" hx-target="#tx-dialog-body" hx-trigger="click, keyup[key=='Enter']">
   {% if tx.is_transfer %}
     <span class="tx-icon tone-0"><c-icon name="arrows-exchange" /></span>
   {% else %}
@@ -33,5 +34,12 @@
   <div class="tx-amount num{% if tx.type == 'income' %} plus{% endif %}">
     {% if tx.type == "expense" %}−{% elif tx.type == "income" %}+{% endif %}{{ tx.amount|money:tx.currency }}
     {% if tx.currency != request.household.base_currency %}<small>≈ {{ tx.amount_base|money:request.household.base_currency }}</small>{% endif %}
+  </div>
+
+  <div class="tx-actions">
+    <button class="icon-btn" type="button" aria-label="{% translate 'Змінити' %}"
+            hx-get="{% url 'money:transaction_edit' tx.pk %}" hx-target="#tx-dialog-body" hx-trigger="click consume"><c-icon name="pencil" /></button>
+    <button class="icon-btn danger" type="button" aria-label="{% translate 'Видалити' %}"
+            hx-get="{% url 'money:transaction_delete' tx.pk %}" hx-target="#tx-dialog-body" hx-trigger="click consume"><c-icon name="trash" /></button>
   </div>
 </li>
