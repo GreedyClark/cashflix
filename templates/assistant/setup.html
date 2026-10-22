@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "AI-асистент" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "AI-асистент" %}</h1>
+    </div>
+  </div>
+
+  <section class="panel ai-setup">
+    <div class="ai-step">
+      <span class="ai-step-num">1</span>
+      <div>
+        <h2>{% translate "Отримайте безкоштовний ключ" %}</h2>
+        <p class="bud-hint">{% translate "Увійдіть у Google AI Studio тим самим Google-акаунтом і натисніть «Create API key»." %}</p>
+        <a class="btn-cf sm" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener"><c-icon name="link" />{% translate "Відкрити Google AI Studio" %}</a>
+      </div>
+    </div>
+
+    <form class="ai-step" method="post" action="{% url 'assistant:key_save' %}">
+      {% csrf_token %}
+      <span class="ai-step-num">2</span>
+      <div class="ai-step-body">
+        <label class="ai-step-title" for="gemini-key">{% translate "Скопіюйте ключ і вставте сюди" %}</label>
+        <div class="conn-row">
+          <input type="password" name="gemini_key" id="gemini-key" autocomplete="off" placeholder="AIza…">
+          <button class="btn-cf primary" type="submit"><c-icon name="key" />{% translate "Перевірити і зберегти" %}</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="ai-warning">
+      <p class="ai-warning-title">{% translate "AI-асистент безкоштовний — потрібен лише ваш ключ Gemini." %}</p>
+      <p><c-icon name="lock" />{% translate "Ключ зберігається зашифрованим і використовується тільки для ваших запитів." %}</p>
+      <p><c-icon name="chart-line" />{% translate "Асистент отримує лише підсумки за категоріями — без назв магазинів, імен і рахунків." %}</p>
+      <p><c-icon name="shield-check" />{% translate "На безкоштовному тарифі Google може використовувати запити для покращення своїх сервісів. Вимкнути асистента можна будь-коли в налаштуваннях." %}</p>
+    </div>
+  </section>
+{% endblock %}

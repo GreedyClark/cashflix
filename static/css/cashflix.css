@@ -4772,3 +4772,259 @@ a.bar-col:hover i {
 .mono-row .btn-cf {
   justify-content: center;
 }
+
+.ai-setup {
+  display: grid;
+  gap: 20px;
+  max-width: 720px;
+  padding: 24px;
+}
+
+.ai-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.ai-step h2,
+.ai-step-title {
+  display: block;
+  margin: 2px 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ai-step .btn-cf {
+  margin-top: 8px;
+}
+
+.ai-step-num {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-step input[type="password"],
+.ai-ask input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+}
+
+.ai-warning {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.ai-warning p {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.ai-warning .icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--ink-subtle);
+}
+
+.ai-warning-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ai-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.ai-chat {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  height: calc(100vh - 210px);
+  min-height: 460px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ai-log {
+  display: flex;
+  flex-direction: column-reverse;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.ai-messages {
+  display: grid;
+  gap: 12px;
+}
+
+.ai-msg {
+  max-width: 78%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.ai-msg p {
+  margin: 0;
+}
+
+.ai-msg p + p,
+.ai-msg ul + p,
+.ai-msg p + ul {
+  margin-top: 8px;
+}
+
+.ai-msg ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.ai-msg.model {
+  justify-self: start;
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+}
+
+.ai-msg.user {
+  justify-self: end;
+  background: var(--accent);
+  color: #fff;
+  white-space: pre-wrap;
+}
+
+.ai-msg.error {
+  border-color: color-mix(in srgb, var(--crit) 40%, transparent);
+  color: var(--crit);
+}
+
+.ai-credit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink-tertiary);
+}
+
+.ai-credit .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.ai-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.ai-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 14px;
+}
+
+.ai-ask .btn-cf {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+}
+
+.ai-left {
+  flex-basis: 100%;
+}
+
+.ai-thinking {
+  display: none;
+  flex-basis: 100%;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.ai-ask.htmx-request .ai-thinking {
+  display: inline-flex;
+}
+
+.ai-ask.htmx-request .ai-left {
+  display: none;
+}
+
+.ai-side {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+}
+
+.ai-briefing summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ai-briefing pre {
+  max-height: 420px;
+  margin: 10px 0 0;
+  padding: 12px;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font: 12px/1.5 var(--font);
+  white-space: pre-wrap;
+  color: var(--ink-muted);
+}
+
+@media (max-width: 991px) {
+  .ai-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-chat {
+    height: calc(100dvh - 300px);
+    min-height: 420px;
+  }
+
+  .ai-suggestions {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .ai-suggestions .hint-chip {
+    flex: none;
+  }
+
+  .ai-msg {
+    max-width: 90%;
+  }
+}

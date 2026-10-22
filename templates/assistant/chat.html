@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load i18n chat %}
+
+{% block title %}{% translate "AI-асистент" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{% blocktranslate with hint=key.hint %}Gemini · ваш ключ …{{ hint }}{% endblocktranslate %}</p>
+      <h1 class="page-title">{% translate "AI-асистент" %}</h1>
+    </div>
+    <div class="page-actions">
+      <form method="post" action="{% url 'assistant:clear' %}">{% csrf_token %}<button class="btn-cf" type="submit"><c-icon name="trash" />{% translate "Очистити чат" %}</button></form>
+      <form method="post" action="{% url 'assistant:disable' %}">{% csrf_token %}<button class="btn-cf ghost-danger" type="submit">{% translate "Вимкнути асистента" %}</button></form>
+    </div>
+  </div>
+
+  <div class="ai-layout">
+    <section class="panel ai-chat">
+      <div class="ai-log">
+        <div class="ai-messages" id="chat-log">
+          <div class="ai-msg model intro">
+            <p>{% translate "Привіт! Я бачу підсумки ваших витрат, лімітів, регулярних платежів і цілей. Питайте, де зекономити, чи вкладетесь у ліміти або як швидше накопичити." %}</p>
+          </div>
+          {% for message in chat %}
+            {% if message.role == "model" %}
+              <div class="ai-msg model">{{ message.text|chat_markdown }}<span class="ai-credit"><c-icon name="sparkles" />{% translate "Порахував CashFlix · сформулював Gemini" %}</span></div>
+            {% else %}
+              <div class="ai-msg user">{{ message.text }}</div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="ai-suggestions">
+        {% for text in suggestions %}
+          <button class="hint-chip" type="button" hx-post="{% url 'assistant:ask' %}" hx-vals='{"question": "{{ text|escapejs }}"}' hx-target="#chat-log" hx-swap="beforeend" hx-indicator="#ask-form">{{ text }}</button>
+        {% endfor %}
+      </div>
+
+      {% include "assistant/_ask_form.html" %}
+    </section>
+
+    <aside class="panel ai-side">
+      <h2 class="conn-subtitle">{% translate "Що бачить асистент" %}</h2>
+      <p class="bud-hint">{% translate "Саме цей текст і ваше питання йдуть у Gemini. Без назв магазинів, імен і рахунків." %}</p>
+      <details class="ai-briefing">
+        <summary>{% translate "Показати довідку" %}</summary>
+        <pre>{{ briefing }}</pre>
+      </details>
+    </aside>
+  </div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% load i18n chat %}
+{% if not skip %}
+  <div class="ai-msg user">{{ question }}</div>
+  {% if error %}
+    <div class="ai-msg model error"><p>{{ error }}</p></div>
+  {% else %}
+    <div class="ai-msg model">{{ reply.text|chat_markdown }}<span class="ai-credit"><c-icon name="sparkles" />{% translate "Порахував CashFlix · сформулював Gemini" %}</span></div>
+  {% endif %}
+  {% if left_today is not None %}{% include "assistant/_ask_form.html" with oob=True %}{% endif %}
+{% endif %}

@@ -1,0 +1,9 @@
+{% load i18n %}
+<form class="ai-ask" id="ask-form"{% if oob %} hx-swap-oob="true"{% endif %}
+      hx-post="{% url 'assistant:ask' %}" hx-target="#chat-log" hx-swap="beforeend">
+  {% csrf_token %}
+  <input type="text" name="question" maxlength="500" autocomplete="off" placeholder="{% translate 'Запитайте про свої витрати…' %}" aria-label="{% translate 'Питання' %}"{% if not oob %} autofocus{% endif %}>
+  <button class="btn-cf primary" type="submit" aria-label="{% translate 'Надіслати' %}"><c-icon name="send" /></button>
+  <span class="ai-thinking"><c-icon name="sparkles" />{% translate "Думаю…" %}</span>
+  <span class="bud-hint ai-left" id="left-today">{% blocktranslate count counter=left_today %}лишився {{ counter }} запит на сьогодні{% plural %}лишилось {{ counter }} запитів на сьогодні{% endblocktranslate %}</span>
+</form>

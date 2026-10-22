@@ -9,5 +9,6 @@ MAIN_MENU = [
     {"label": _("Категорії"), "short": _("Категорії"), "icon": "category", "url_name": "money:categories"},
     {"label": _("Регулярні платежі"), "short": _("Платежі"), "icon": "repeat", "url_name": "recurring:payments"},
     {"label": _("Цілі"), "short": _("Цілі"), "icon": "target", "url_name": "goals:goals"},
+    {"label": _("AI-асистент"), "short": _("Асистент"), "icon": "sparkles", "url_name": "assistant:assistant"},
     {"label": _("Підключення"), "short": _("Підключення"), "icon": "link", "url_name": "integrations:connections"},
 ]
