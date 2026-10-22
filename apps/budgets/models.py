@@ -39,7 +39,7 @@ class Limit(models.Model):
         CRIT = "crit", _("перевищено")
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="limits", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="limits", verbose_name=_("сім'я")
     )
     category = models.ForeignKey(
         Category, on_delete=models.CASCADE, related_name="limits", verbose_name=_("категорія")
@@ -51,7 +51,7 @@ class Limit(models.Model):
         blank=True,
         related_name="limits",
         verbose_name=_("для кого"),
-        help_text=_("Порожньо — спільний ліміт на все господарство"),
+        help_text=_("Порожньо — спільний ліміт на всю сім'ю"),
     )
     amount = models.DecimalField(_("ліміт на місяць"), **MONEY)
     created_at = models.DateTimeField(_("створено"), auto_now_add=True)
@@ -84,11 +84,11 @@ class Limit(models.Model):
         errors = {}
         if self.category_id:
             if self.category.household_id != self.household_id:
-                errors["category"] = _("Категорія належить іншому господарству.")
+                errors["category"] = _("Категорія належить іншій сім'ї.")
             elif self.category.kind != Category.Kind.EXPENSE:
                 errors["category"] = _("Ліміт можна поставити лише на категорію витрат.")
         if self.member_id and self.member.household_id != self.household_id:
-            errors["member"] = _("Ця людина не є учасником господарства.")
+            errors["member"] = _("Ця людина не є учасником сім'ї.")
         if errors:
             raise ValidationError(errors)
 

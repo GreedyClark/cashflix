@@ -29,8 +29,8 @@ class Household(models.Model):
     objects = HouseholdQuerySet.as_manager()
 
     class Meta:
-        verbose_name = _("господарство")
-        verbose_name_plural = _("господарства")
+        verbose_name = _("сім'я")
+        verbose_name_plural = _("сім'ї")
 
     def __str__(self):
         return self.name
@@ -52,7 +52,7 @@ class Membership(models.Model):
         MEMBER = "member", _("учасник")
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="memberships", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="memberships", verbose_name=_("сім'я")
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -108,7 +108,7 @@ class Invitation(models.Model):
     LIFETIME_DAYS = 7
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="invitations", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="invitations", verbose_name=_("сім'я")
     )
     token = models.CharField(max_length=32, unique=True, default=make_token, editable=False)
     created_by = models.ForeignKey(

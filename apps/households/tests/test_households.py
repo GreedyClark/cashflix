@@ -55,6 +55,6 @@ def test_duplicate_membership_is_rejected(yura):
 
 def test_for_user_returns_only_own_households(yura, olya):
     home = create_household(yura, "Дім")
-    create_household(olya, "Інше господарство")
+    create_household(olya, "Інша сім'я")
 
     assert list(Household.objects.for_user(yura)) == [home]

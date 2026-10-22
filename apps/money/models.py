@@ -41,7 +41,7 @@ class Category(models.Model):
         INCOME = "income", _("дохід")
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="categories", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="categories", verbose_name=_("сім'я")
     )
     name = models.CharField(_("назва"), max_length=50)
     kind = models.CharField(_("тип"), max_length=10, choices=Kind.choices, default=Kind.EXPENSE)
@@ -96,7 +96,7 @@ class Account(models.Model):
     ICONS = {"card": "credit-card", "cash": "cash", "savings": "pig-money", "investment": "chart-line"}
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="accounts", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="accounts", verbose_name=_("сім'я")
     )
     name = models.CharField(_("назва"), max_length=50)
     kind = models.CharField(_("тип"), max_length=12, choices=Kind.choices, default=Kind.CARD)
@@ -126,7 +126,7 @@ class Account(models.Model):
 
     def clean(self):
         if self.owner_id and self.owner.household_id != self.household_id:
-            raise ValidationError({"owner": _("Власник має бути учасником цього господарства.")})
+            raise ValidationError({"owner": _("Власник має бути учасником цієї сім'ї.")})
 
     @property
     def icon(self):
@@ -163,7 +163,7 @@ class Transaction(models.Model):
         IMPORT = "import", _("імпорт")
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="transactions", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="transactions", verbose_name=_("сім'я")
     )
     type = models.CharField(_("тип"), max_length=10, choices=Type.choices, default=Type.EXPENSE)
     date = models.DateField(_("дата"), default=timezone.localdate)
@@ -248,10 +248,10 @@ class Transaction(models.Model):
         errors = {}
 
         if self.account_id and self.account.household_id != self.household_id:
-            errors["account"] = _("Рахунок належить іншому господарству.")
+            errors["account"] = _("Рахунок належить іншій сім'ї.")
 
         if self.member_id and self.member.household_id != self.household_id:
-            errors["member"] = _("Ця людина не є учасником господарства.")
+            errors["member"] = _("Ця людина не є учасником сім'ї.")
 
         if self.is_transfer:
             if not self.to_account_id:
@@ -259,7 +259,7 @@ class Transaction(models.Model):
             elif self.to_account_id == self.account_id:
                 errors["to_account"] = _("Оберіть інший рахунок.")
             elif self.to_account.household_id != self.household_id:
-                errors["to_account"] = _("Рахунок належить іншому господарству.")
+                errors["to_account"] = _("Рахунок належить іншій сім'ї.")
             if self.category_id:
                 errors["category"] = _("У переказу немає категорії.")
         else:
@@ -268,7 +268,7 @@ class Transaction(models.Model):
             if not self.category_id:
                 errors["category"] = _("Оберіть категорію.")
             elif self.category.household_id != self.household_id:
-                errors["category"] = _("Категорія належить іншому господарству.")
+                errors["category"] = _("Категорія належить іншій сім'ї.")
             elif self.category.kind != self.type:
                 errors["category"] = _("Категорія не підходить до типу операції.")
 

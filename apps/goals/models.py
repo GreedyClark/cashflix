@@ -17,7 +17,7 @@ class GoalQuerySet(models.QuerySet):
 
 class Goal(models.Model):
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="goals", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="goals", verbose_name=_("сім'я")
     )
     name = models.CharField(_("назва"), max_length=80)
     icon = models.CharField(_("іконка"), max_length=40, default="target")

@@ -19,7 +19,7 @@ class RecurringPayment(models.Model):
         YEARLY = "yearly", _("щороку")
 
     household = models.ForeignKey(
-        Household, on_delete=models.CASCADE, related_name="recurring_payments", verbose_name=_("господарство")
+        Household, on_delete=models.CASCADE, related_name="recurring_payments", verbose_name=_("сім'я")
     )
     title = models.CharField(_("назва"), max_length=120)
     type = models.CharField(
@@ -64,14 +64,14 @@ class RecurringPayment(models.Model):
     def clean(self):
         errors = {}
         if self.account_id and self.account.household_id != self.household_id:
-            errors["account"] = _("Рахунок належить іншому господарству.")
+            errors["account"] = _("Рахунок належить іншій сім'ї.")
         if self.category_id:
             if self.category.household_id != self.household_id:
-                errors["category"] = _("Категорія належить іншому господарству.")
+                errors["category"] = _("Категорія належить іншій сім'ї.")
             elif self.category.kind != self.type:
                 errors["category"] = _("Категорія не підходить до типу платежу.")
         if self.member_id and self.member.household_id != self.household_id:
-            errors["member"] = _("Ця людина не є учасником господарства.")
+            errors["member"] = _("Ця людина не є учасником сім'ї.")
         if errors:
             raise ValidationError(errors)
 
