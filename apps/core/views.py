@@ -25,6 +25,7 @@ def home(request):
         "recent": overview.recent(),
         "accounts": overview.accounts,
         "goals": overview.goals(),
+        "upcoming": overview.upcoming(),
         "chart_data": overview.chart_data(spending, half_year, categories),
     }
     template = "core/_overview.html" if request.headers.get("HX-Request") else "core/home.html"

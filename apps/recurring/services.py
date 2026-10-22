@@ -1,9 +1,10 @@
 import logging
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
 
-from apps.money.rates import RateNotFound
+from apps.money.rates import RateNotFound, convert_rate
 
 from .models import RecurringPayment
 
@@ -30,3 +31,49 @@ def run_due_payments(today=None):
             logger.warning("Skipped recurring payment %s: no exchange rate yet", payment.pk)
 
     return created
+
+PER_MONTH = {
+    RecurringPayment.Period.WEEKLY: Decimal("52") / 12,
+    RecurringPayment.Period.MONTHLY: Decimal("1"),
+    RecurringPayment.Period.YEARLY: Decimal("1") / 12,
+}
+
+
+def in_base(payment, amount, today):
+    base = payment.household.base_currency
+    try:
+        return amount * convert_rate(payment.account.currency, base, today)
+    except RateNotFound:
+        return None
+
+
+def monthly_amount(payment, today):
+    value = in_base(payment, payment.amount, today)
+    return None if value is None else value * PER_MONTH[payment.period]
+
+
+def occurrences(payment, start, end):
+    dates = []
+    date = payment.next_date
+    while date <= end:
+        if date >= start:
+            dates.append(date)
+        date = payment.following_date(date)
+    return dates
+
+
+def first_date_from(payment, today):
+    date = payment.start_date
+    while date < today:
+        date = payment.following_date(date)
+    return date
+
+
+@transaction.atomic
+def pay_now(payment, amount, date):
+    tx = payment.make_transaction(date)
+    tx.amount = amount
+    tx.save()
+    payment.next_date = payment.following_date(payment.next_date)
+    payment.save(update_fields=["next_date"])
+    return tx

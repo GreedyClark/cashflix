@@ -1,0 +1,32 @@
+{% load i18n money %}
+<form class="tx-form" novalidate hx-post="{% url 'recurring:payment_pay' payment.pk %}" hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{{ payment.title }}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    <p class="panel-text">
+      {% blocktranslate with date=payment.next_date|date:"j E" %}Створимо операцію зараз, а наступний платіж за розкладом перенесемо з {{ date }} на період уперед.{% endblocktranslate %}
+      {% if payment.is_approximate %}{% translate "Сума орієнтовна, тож перевірте її." %}{% endif %}
+    </p>
+    <div class="field-cf{% if form.amount.errors %} has-error{% endif %}">
+      <label class="amount-field">
+        <input class="amount-input num" type="text" name="amount" value="{{ form.amount.value|default_if_none:'' }}"
+               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума' %}" autofocus>
+        <span class="amount-cur static">{% if payment.account.currency == "USD" %}${% elif payment.account.currency == "EUR" %}€{% else %}₴{% endif %}</span>
+      </label>
+      {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    <div class="field-cf{% if form.date.errors %} has-error{% endif %}">
+      <label class="f-label" for="{{ form.date.id_for_label }}">{% translate "Дата операції" %}</label>
+      {{ form.date }}
+      {% for error in form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="sheet-foot">
+    <button class="btn-cf primary wide" type="submit">{% if payment.type == 'income' %}{% translate "Записати дохід" %}{% else %}{% translate "Записати витрату" %}{% endif %}</button>
+  </div>
+</form>

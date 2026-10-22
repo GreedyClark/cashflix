@@ -184,6 +184,16 @@ class Overview:
     def pace(self):
         return round(self.day / self.days_in_month * 100)
 
+    def upcoming(self, days=7):
+        end = self.today + timedelta(days=days)
+        payments = self.household.recurring_payments.filter(is_active=True, next_date__lte=end)
+        if self.member:
+            payments = payments.filter(Q(member=self.member) | Q(member__isnull=True))
+        payments = payments.select_related("account", "category").order_by("next_date")
+        for payment in payments:
+            payment.days_left = (payment.next_date - self.today).days
+        return payments
+
     def recent(self, count=8):
         items = self.transactions.select_related("category", "account", "to_account", "member__user")[:count]
         days = []

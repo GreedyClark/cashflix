@@ -7,5 +7,6 @@ urlpatterns = [
     path("", include("apps.households.urls")),
     path("", include("apps.money.urls")),
     path("", include("apps.budgets.urls")),
+    path("", include("apps.recurring.urls")),
     path("", include("apps.core.urls")),
 ]

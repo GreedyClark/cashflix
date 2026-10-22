@@ -1,0 +1,68 @@
+{% load i18n money %}
+{% with currency=request.household.base_currency %}
+{% if groups %}
+  <section class="panel bud-sum">
+    <div class="bud-kpis">
+      <div>
+        <p class="eyebrow">{% translate "Обов'язкові витрати" %}</p>
+        <div class="bud-value num">{{ monthly|money:currency }}</div>
+        <span class="bud-hint">{% blocktranslate count counter=count %}на місяць · {{ counter }} активний платіж{% plural %}на місяць · {{ counter }} активних платежів{% endblocktranslate %}</span>
+      </div>
+      <div>
+        <p class="eyebrow">{% translate "Частка доходу" %}</p>
+        <div class="bud-value num">{% if share is not None %}{{ share }}%{% else %}—{% endif %}</div>
+        <span class="bud-hint">{% if income %}{% blocktranslate with amount=income|money:currency %}від середнього доходу {{ amount }}{% endblocktranslate %}{% else %}{% translate "доходів за 3 місяці ще немає" %}{% endif %}</span>
+      </div>
+      <div>
+        <p class="eyebrow">{% translate "Ще до кінця місяця" %}</p>
+        <div class="bud-value num">{{ left_this_month|money:currency }}</div>
+        <span class="bud-hint">{% translate "заплановані списання з сьогодні" %}</span>
+      </div>
+    </div>
+    {% if share is not None %}
+      <div class="lim-bar{% if share > 50 %} warn{% endif %}"><i style="width: {{ share_bar }}%"></i></div>
+    {% endif %}
+  </section>
+
+  {% for group in groups %}
+    <section class="panel pay-group pay-{{ group.key }}">
+      <div class="cat-group-head"><h2>{{ group.title }}</h2></div>
+      <ul class="cat-list">
+        {% for payment in group.items %}
+          <li class="cat-row pay-row">
+            <span class="tx-icon tone-{{ payment.category.color_slot }}"><c-cat-icon :category="payment.category" /></span>
+            <span class="cat-row-main">
+              <span class="cat-row-name">{{ payment.title }}</span>
+              <span class="bud-hint">{{ payment.get_period_display|capfirst }} · {{ payment.account.name }} · {{ payment.category.name }}{% if payment.member %} · {{ payment.member.user.name }}{% endif %}</span>
+            </span>
+            <span class="pay-side">
+              <span class="pay-amount num{% if payment.type == 'income' %} plus{% endif %}">{% if payment.is_approximate %}≈ {% endif %}{% if payment.type == 'income' %}+{% endif %}{{ payment.amount|money:payment.account.currency }}</span>
+              <span class="pay-when">
+                {% if not payment.is_active %}{% translate "на паузі" %}
+                {% elif payment.days_left < 0 %}{% blocktranslate with date=payment.next_date|date:"j E" %}мав бути {{ date }}{% endblocktranslate %}
+                {% elif payment.days_left == 0 %}{% translate "сьогодні" %}
+                {% elif payment.days_left == 1 %}{% translate "завтра" %}
+                {% elif payment.days_left <= 7 %}{% blocktranslate count counter=payment.days_left %}через {{ counter }} день{% plural %}через {{ counter }} дн.{% endblocktranslate %}
+                {% else %}{{ payment.next_date|date:"j E" }}{% endif %}
+              </span>
+            </span>
+            <details class="menu-cf acc-menu">
+              <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+              <div class="menu-pop">
+                {% if payment.is_active %}
+                  <button class="menu-item" type="button" hx-get="{% url 'recurring:payment_pay' payment.pk %}" hx-target="#tx-dialog-body"><c-icon name="check" />{% if payment.type == 'income' %}{% translate "Отримано зараз" %}{% else %}{% translate "Сплачено зараз" %}{% endif %}</button>
+                {% endif %}
+                <button class="menu-item" type="button" hx-get="{% url 'recurring:payment_edit' payment.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
+                <button class="menu-item" type="button" hx-post="{% url 'recurring:payment_toggle' payment.pk %}" hx-swap="none"><c-icon name="{% if payment.is_active %}clock{% else %}repeat{% endif %}" />{% if payment.is_active %}{% translate "Поставити на паузу" %}{% else %}{% translate "Відновити" %}{% endif %}</button>
+                <button class="menu-item danger" type="button" hx-post="{% url 'recurring:payment_delete' payment.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+              </div>
+            </details>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endfor %}
+{% else %}
+  <c-empty icon="repeat" title="{% translate 'Регулярних платежів ще немає' %}">{% translate "Додайте комуналку, підписки чи зарплату, і CashFlix сам створюватиме операції в потрібний день." %}</c-empty>
+{% endif %}
+{% endwith %}

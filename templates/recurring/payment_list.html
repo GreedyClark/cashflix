@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Регулярні платежі" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "Регулярні платежі" %}</h1>
+    </div>
+    <div class="page-actions">
+      <button class="btn-cf primary" type="button" hx-get="{% url 'recurring:payment_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Платіж" %}</button>
+    </div>
+  </div>
+
+  <div id="payments" class="pay-page"
+       hx-get="{% url 'recurring:payments' %}" hx-trigger="paymentsChanged from:body" hx-disinherit="*">
+    {% include "recurring/_payment_list.html" %}
+  </div>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Платіж' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
+{% endblock %}

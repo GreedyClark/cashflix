@@ -78,6 +78,18 @@
         <span class="disabled" aria-disabled="true"><c-icon :name="item.icon" /><span>{{ item.short }}</span></span>
       {% endif %}
     {% endfor %}
+    <details class="menu-cf more-nav">
+      <summary><c-icon name="dots" /><span>{% translate "Ще" %}</span></summary>
+      <div class="more-pop">
+        {% for item in main_menu|slice:"4:" %}
+          {% if item.url %}
+            <a class="{% if item.active %}active{% endif %}" href="{{ item.url }}"><c-icon :name="item.icon" />{{ item.label }}</a>
+          {% else %}
+            <span class="disabled" aria-disabled="true"><c-icon :name="item.icon" />{{ item.label }}</span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </details>
   </nav>
 
   <div class="toast-zone" id="toast-zone" aria-live="polite"></div>
