@@ -10,7 +10,7 @@ from apps.money.ingest import ingest
 from apps.money.models import Account, Transaction
 from apps.money.rates import RateNotFound
 
-from .models import ShortcutToken
+from .models import MonobankAccount, ShortcutToken
 from .parsing import BadPayload, match_account, parse_amount, parse_moment
 
 MESSAGES = {
@@ -60,6 +60,11 @@ def shortcut(request):
     account = match_account(accounts, payload.get("card"), fallback)
     if account is None:
         return error("account")
+    if MonobankAccount.objects.filter(account=account).exists():
+        return JsonResponse({
+            "status": "skipped",
+            "message": f"{account.name} підключено до Monobank, операція прийде звідти.",
+        })
 
     kind = Transaction.Type.INCOME if str(payload.get("type", "")).lower() in ("income", "дохід") else Transaction.Type.EXPENSE
     title = str(payload.get("merchant") or payload.get("title") or "").strip() or "Apple Pay"

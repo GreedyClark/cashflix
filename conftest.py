@@ -91,3 +91,20 @@ def offline_nbu(monkeypatch):
         raise nbu.NbuUnavailable("offline in tests")
 
     monkeypatch.setattr(nbu, "fetch", unavailable)
+
+
+@pytest.fixture(autouse=True)
+def encryption_key(settings):
+    from cryptography.fernet import Fernet
+
+    settings.ENCRYPTION_KEY = Fernet.generate_key().decode()
+
+
+@pytest.fixture(autouse=True)
+def offline_monobank(monkeypatch):
+    from apps.integrations import monobank
+
+    def unavailable(*args, **kwargs):
+        raise monobank.MonobankError("offline in tests")
+
+    monkeypatch.setattr(monobank, "request", unavailable)

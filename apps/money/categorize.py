@@ -35,6 +35,19 @@ STARTER = {
 }
 
 
+MCC_GROUPS = {
+    "Продукти": [5300, 5411, 5422, 5441, 5451, 5462, 5499],
+    "Кафе": [5811, 5812, 5813, 5814],
+    "Транспорт": [4111, 4112, 4121, 4131, 4784, 4789, 5172, 5511, 5532, 5533, 5541, 5542, 7523, 7538, 7542],
+    "Комуналка": [4814, 4816, 4900],
+    "Підписки": [4899, 5815, 5816, 5817, 5818],
+    "Розваги": [5945, 7832, 7841, 7922, 7929, 7991, 7994, 7996, 7999],
+    "Одяг": [5611, 5621, 5631, 5641, 5651, 5655, 5661, 5691, 5699, 5948],
+    "Здоров'я": [5122, 5912, 8011, 8021, 8031, 8041, 8042, 8043, 8049, 8050, 8062, 8071, 8099],
+}
+MCC = {code: name for name, codes in MCC_GROUPS.items() for code in codes}
+
+
 @dataclass
 class Guess:
     category: Category | None
@@ -61,13 +74,15 @@ def from_starter(key, categories):
     return None
 
 
-def categorize(household, title, kind=Category.Kind.EXPENSE):
+def categorize(household, title, kind=Category.Kind.EXPENSE, mcc=None):
     key = merchant_key(title)
     if key:
         rule = MerchantRule.objects.filter(household=household, key=key, category__kind=kind).select_related("category").first()
         if rule and not rule.category.is_archived:
             return Guess(rule.category, False, "memory")
     categories = {c.name: c for c in household.categories.filter(kind=kind, is_archived=False)}
+    if kind == Category.Kind.EXPENSE and MCC.get(mcc) in categories:
+        return Guess(categories[MCC[mcc]], False, "mcc")
     found = from_starter(key, categories) if kind == Category.Kind.EXPENSE else None
     if found:
         return Guess(found, False, "starter")

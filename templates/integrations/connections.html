@@ -92,15 +92,69 @@
       <p class="field-help">{% translate "Поки сайт працює лише на вашому комп'ютері, iPhone до нього не достукається. Шорткат запрацює після деплою, а перевірити ендпоінт можна запитом із самого комп'ютера." %}</p>
     </section>
 
-    <section class="panel conn-card muted">
+    <section class="panel conn-card" id="monobank">
       <div class="conn-head">
         <span class="tx-icon tone-0"><c-icon name="credit-card" /></span>
         <div>
           <h2>{% translate "Monobank" %}</h2>
-          <p class="bud-hint">{% translate "Виписка з карток Monobank автоматично, разом із кодом категорії від банку. Наступний крок." %}</p>
+          <p class="bud-hint">{% translate "Виписка з карток і банок Monobank разом із кодом категорії від банку. Рахунок, підключений до Monobank, шорткат більше не записує, щоб не було дублів." %}</p>
         </div>
-        <span class="conn-status">{% translate "скоро" %}</span>
+        {% if connection %}<span class="conn-status on">{{ connection.client_name|default:_("підключено") }}</span>{% else %}<span class="conn-status">{% translate "не підключено" %}</span>{% endif %}
       </div>
+
+      {% if connection %}
+        <form class="mono-links" method="post" action="{% url 'integrations:monobank_links' %}">
+          {% csrf_token %}
+          {% for item in mono_accounts %}
+            <div class="mono-row">
+              <span class="mono-name">
+                <c-icon name="{% if item.is_jar %}pig-money{% else %}credit-card{% endif %}" />{{ item.title }}
+                {% if item.account and item.synced_until %}<span class="bud-hint">{% blocktranslate with date=item.synced_until|date:"j E, H:i" %}оновлено {{ date }}{% endblocktranslate %}</span>{% endif %}
+              </span>
+              <select name="link_{{ item.pk }}" aria-label="{% blocktranslate with name=item.title %}Рахунок для {{ name }}{% endblocktranslate %}">
+                <option value="">{% translate "Не записувати" %}</option>
+                {% for account in item.choices %}
+                  <option value="{{ account.pk }}"{% if item.account_id == account.pk %} selected{% endif %}>{{ account.name }}</option>
+                {% endfor %}
+              </select>
+              {% if item.account %}
+                <button class="btn-cf sm" type="submit" form="sync-{{ item.pk }}"><c-icon name="repeat" />{% translate "Оновити" %}</button>
+              {% else %}
+                <span></span>
+              {% endif %}
+            </div>
+          {% empty %}
+            <p class="panel-text">{% translate "Карток у гривні, доларах чи євро не знайшлося." %}</p>
+          {% endfor %}
+          {% if mono_accounts %}
+            <div class="conn-actions"><button class="btn-cf primary" type="submit">{% translate "Зберегти прив'язку" %}</button></div>
+          {% endif %}
+        </form>
+        {% for item in mono_accounts %}
+          {% if item.account %}<form id="sync-{{ item.pk }}" method="post" action="{% url 'integrations:monobank_sync' item.pk %}">{% csrf_token %}</form>{% endif %}
+        {% endfor %}
+        <p class="field-help">{% translate "Перший раз підтягуються операції за 7 днів. Monobank дозволяє один запит на хвилину, тож картки оновлюйте по черзі. Перекази між вашими картками стануть переказами, а не витратою й доходом." %}</p>
+        <div class="conn-actions">
+          <form method="post" action="{% url 'integrations:monobank_refresh' %}">
+            {% csrf_token %}
+            <button class="btn-cf" type="submit"><c-icon name="repeat" />{% translate "Оновити список карток" %}</button>
+          </form>
+          <form method="post" action="{% url 'integrations:monobank_disconnect' %}">
+            {% csrf_token %}
+            <button class="btn-cf ghost-danger" type="submit"><c-icon name="trash" />{% translate "Відключити" %}</button>
+          </form>
+        </div>
+      {% else %}
+        <form class="conn-form" method="post" action="{% url 'integrations:monobank_connect' %}">
+          {% csrf_token %}
+          <label class="f-label" for="mono-token">{% translate "Особистий токен Monobank" %}</label>
+          <div class="conn-row">
+            <input type="password" name="mono_token" id="mono-token" autocomplete="off" placeholder="{% translate 'Вставте токен' %}">
+            <button class="btn-cf primary" type="submit">{% translate "Підключити" %}</button>
+          </div>
+          <p class="field-help">{% blocktranslate %}Токен видає сам банк на <a href="https://api.monobank.ua/" target="_blank" rel="noopener">api.monobank.ua</a>: увійдіть через застосунок і скопіюйте його. Токен дає лише перегляд виписки, переказувати гроші з ним не можна. У CashFlix він зберігається зашифрованим.{% endblocktranslate %}</p>
+        </form>
+      {% endif %}
     </section>
   </div>
 {% endblock %}

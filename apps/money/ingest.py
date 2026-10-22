@@ -37,14 +37,14 @@ def enrich(twin, guess, title):
 
 
 def ingest(household, *, account, amount, title, source, occurred_at=None, external_id="", member=None,
-           kind=Transaction.Type.EXPENSE, category=None):
+           kind=Transaction.Type.EXPENSE, category=None, mcc=None, note=""):
     occurred_at = occurred_at or timezone.now()
     if external_id:
         existing = household.transactions.filter(source=source, external_id=external_id).first()
         if existing:
             return existing, DUPLICATE
 
-    guess = None if category else categorize(household, title, kind)
+    guess = None if category else categorize(household, title, kind, mcc)
     twin = find_twin(household, account, amount, kind, occurred_at)
     if twin and twin.source != source:
         return enrich(twin, guess, title), MERGED
@@ -55,6 +55,7 @@ def ingest(household, *, account, amount, title, source, occurred_at=None, exter
         date=timezone.localdate(occurred_at),
         occurred_at=occurred_at,
         title=title[:120],
+        note=note,
         account=account,
         amount=amount,
         category=category or guess.category,
