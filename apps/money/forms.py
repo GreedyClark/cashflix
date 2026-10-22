@@ -118,7 +118,7 @@ class TransactionFilterForm(forms.Form):
         for kind, heading in ((Category.Kind.EXPENSE, _("Витрати")), (Category.Kind.INCOME, _("Доходи"))):
             category_options.append({"heading": heading})
             category_options += [
-                option(c.pk, c.name, c.pk == category, icon=c.icon, tone=c.color_slot)
+                option(c.pk, c.name, c.pk == category, category=c, tone=c.color_slot)
                 for c in self.categories
                 if c.kind == kind
             ]
@@ -188,7 +188,8 @@ class TransactionForm(forms.ModelForm):
     def __init__(self, *args, household, membership, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.household = household
-        self.fields["category"].queryset = household.categories.filter(is_archived=False)
+        current = Q(pk=self.instance.category_id) if self.instance.category_id else Q(pk__in=[])
+        self.fields["category"].queryset = household.categories.filter(Q(is_archived=False) | current)
         self.fields["account"].queryset = household.accounts.filter(is_archived=False)
         self.fields["to_account"].queryset = household.accounts.filter(is_archived=False)
         self.fields["member"].queryset = household.memberships.active().select_related("user")
@@ -276,16 +277,29 @@ def default_account(household, membership):
 
 
 class AccountForm(forms.ModelForm):
+    SUGGESTIONS = [_("ОВДП"), _("Депозит"), _("Фонд нерухомості"), _("Акції"), _("Криптовалюта")]
+    FIXED_FIELDS = ["annual_rate", "starts_on", "ends_on", "payout"]
+
     opening_balance = AmountField(label=_("Початковий залишок"), required=False)
+    annual_rate = AmountField(label=_("Ставка"), required=False, min_value=Decimal("0.01"), max_value=Decimal("100"))
     owner = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
 
     class Meta:
         model = Account
-        fields = ["name", "kind", "investment_type", "currency", "owner", "opening_balance"]
+        fields = [
+            "name", "kind", "investment_type", "yield_mode", "annual_rate", "starts_on", "ends_on", "payout",
+            "currency", "owner", "opening_balance",
+        ]
         widgets = {
             "name": forms.TextInput(attrs={"placeholder": _("Наприклад, Монобанк"), "autocomplete": "off"}),
             "kind": forms.RadioSelect,
-            "investment_type": forms.RadioSelect,
+            "investment_type": forms.TextInput(
+                attrs={"list": "investment-suggestions", "placeholder": _("Наприклад, ОВДП"), "autocomplete": "off"}
+            ),
+            "yield_mode": forms.RadioSelect,
+            "starts_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "ends_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "payout": forms.RadioSelect,
             "currency": forms.RadioSelect,
         }
         error_messages = {"name": {"required": _("Вкажіть назву рахунку.")}}
@@ -294,11 +308,18 @@ class AccountForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.instance.household = household
         self.fields["owner"].queryset = household.memberships.active().select_related("user")
-        self.fields["investment_type"].choices = Account.InvestmentType.choices
+        self.fields["yield_mode"].choices = Account.YieldMode.choices
+        self.fields["payout"].choices = Account.Payout.choices
+        self.initial.setdefault("yield_mode", self.instance.yield_mode or Account.YieldMode.FIXED)
+        self.initial.setdefault("payout", self.instance.payout or Account.Payout.END)
         if self.instance.pk:
             self.initial["opening_balance"] = format_amount(self.instance.opening_balance)
+            if self.instance.annual_rate:
+                self.initial["annual_rate"] = format_amount(self.instance.annual_rate)
             if self.instance.transactions.exists() or self.instance.incoming_transfers.exists():
                 self.fields["currency"].disabled = True
+        else:
+            self.initial.setdefault("starts_on", timezone.localdate())
 
     def clean_opening_balance(self):
         return self.cleaned_data["opening_balance"] or Decimal("0")
@@ -307,8 +328,20 @@ class AccountForm(forms.ModelForm):
         cleaned = super().clean()
         if cleaned.get("kind") != Account.Kind.INVESTMENT:
             cleaned["investment_type"] = ""
-        elif not cleaned.get("investment_type"):
-            cleaned["investment_type"] = Account.InvestmentType.OTHER
+            cleaned["yield_mode"] = ""
+        if cleaned.get("yield_mode") != Account.YieldMode.FIXED:
+            for name in self.FIXED_FIELDS:
+                cleaned[name] = None if name != "payout" else ""
+            return cleaned
+        if not cleaned.get("annual_rate") and "annual_rate" not in self.errors:
+            self.add_error("annual_rate", _("Вкажіть ставку."))
+        if not cleaned.get("starts_on") and "starts_on" not in self.errors:
+            self.add_error("starts_on", _("Вкажіть дату початку."))
+        if not cleaned.get("payout"):
+            cleaned["payout"] = Account.Payout.END
+        starts, ends = cleaned.get("starts_on"), cleaned.get("ends_on")
+        if starts and ends and ends <= starts:
+            self.add_error("ends_on", _("Дата закінчення має бути пізніше за початок."))
         return cleaned
 
     def owner_options(self):

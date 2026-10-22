@@ -6,7 +6,7 @@
     <span class="tx-icon tone-0"><c-icon name="arrows-exchange" /></span>
   {% else %}
     <span class="tx-icon tone-{{ tx.category.color_slot }}">
-      <c-icon :name="tx.category.icon" />
+      <c-cat-icon :category="tx.category" />
       {% if tx.member %}<span class="avatar-cf micro color-{{ tx.member.color_slot }}" title="{{ tx.member.user.name }}">{{ tx.member.user.initial }}</span>{% endif %}
     </span>
   {% endif %}

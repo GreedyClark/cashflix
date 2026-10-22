@@ -1,0 +1,34 @@
+{% load i18n %}
+<form class="tx-form" novalidate hx-post="{% url 'money:category_merge' source.pk %}" hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% blocktranslate with name=source.name %}Об'єднати «{{ name }}»{% endblocktranslate %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    <p class="panel-text">
+      {% blocktranslate with name=source.name count counter=count %}{{ counter }} операція, ліміти й регулярні платежі з «{{ name }}» перейдуть у категорію, яку оберете. Сама «{{ name }}» зникне.{% plural %}{{ counter }} операцій, ліміти й регулярні платежі з «{{ name }}» перейдуть у категорію, яку оберете. Сама «{{ name }}» зникне.{% endblocktranslate %}
+    </p>
+    <fieldset class="field-cf{% if form.target.errors %} has-error{% endif %}">
+      <legend class="f-label">{% translate "Перенести в" %}</legend>
+      <div class="cat-grid">
+        {% for category in form.fields.target.queryset %}
+          <label class="cat-tile tone-{{ category.color_slot }}">
+            <input type="radio" name="target" value="{{ category.pk }}"{% if form.target.value|stringformat:"s" == category.pk|stringformat:"s" %} checked{% endif %}>
+            <span class="tx-icon tone-{{ category.color_slot }}"><c-cat-icon :category="category" /></span>
+            <span class="cat-tile-name">{{ category.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      {% for error in form.target.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </fieldset>
+    <p class="field-help">{% translate "Якщо в обраній категорії вже є такий самий ліміт, лишиться її ліміт." %}</p>
+  </div>
+
+  <div class="sheet-foot">
+    <span class="sheet-foot-space"></span>
+    <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+    <button class="btn-cf primary" type="submit">{% translate "Об'єднати" %}</button>
+  </div>
+</form>

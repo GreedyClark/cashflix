@@ -1,0 +1,85 @@
+{% load i18n %}
+<form class="tx-form limit-form" novalidate
+      hx-post="{% if limit %}{% url 'budgets:limit_edit' limit.pk %}{% else %}{% url 'budgets:limit_create' %}{% endif %}"
+      hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% if limit %}{% translate "Ліміт" %}{% else %}{% translate "Новий ліміт" %}{% endif %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    {% for error in form.non_field_errors %}<p class="alert-cf error">{{ error }}</p>{% endfor %}
+
+    {% if limit %}
+      <div class="field-cf">
+        <span class="f-label">{% translate "Категорія" %}</span>
+        <div class="limit-category">
+          <span class="tx-icon tone-{{ limit.category.color_slot }}"><c-cat-icon :category="limit.category" /></span>{{ limit.category.name }}
+        </div>
+        <input type="hidden" name="category" value="{{ limit.category_id }}">
+      </div>
+    {% else %}
+      <fieldset class="field-cf{% if form.category.errors %} has-error{% endif %}">
+        <legend class="f-label">{% translate "Категорія" %}</legend>
+        <div class="cat-grid">
+          {% for option in form.category_options %}
+            <label class="cat-tile tone-{{ option.object.color_slot }}">
+              <input type="radio" name="category" value="{{ option.object.pk }}"{% if option.checked %} checked{% endif %}>
+              <span class="tx-icon tone-{{ option.object.color_slot }}"><c-cat-icon :category="option.object" /></span>
+              <span class="cat-tile-name">{{ option.object.name }}</span>
+            </label>
+          {% endfor %}
+          <label class="cat-tile tone-0 cat-new">
+            <input type="radio" name="category" value="new"{% if form.is_new_category %} checked{% endif %}>
+            <span class="tx-icon tone-0"><c-icon name="plus" /></span>
+            <span class="cat-tile-name">{% translate "Нова" %}</span>
+          </label>
+        </div>
+        {% for error in form.category.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      </fieldset>
+
+      <div class="new-cat">
+        {% include "money/_category_fields.html" with cf=category_form %}
+      </div>
+    {% endif %}
+
+    <div class="field-cf{% if form.amount.errors %} has-error{% endif %}">
+      <label class="amount-field">
+        {% include "budgets/_amount_input.html" %}
+        <span class="amount-cur static">{% translate "₴ / міс." %}</span>
+      </label>
+      {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <div id="limit-hints" hx-get="{% url 'budgets:limit_hints' %}" hx-trigger="load, change from:closest form"
+           hx-include="[name=category]:checked, [name=category][type=hidden], [name=member]:checked" hx-target="this"></div>
+    </div>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Чий ліміт" %}</legend>
+      <div class="pill-row">
+        {% for option in form.owner_options %}
+          <label class="pill-cf person">
+            <input type="radio" name="member" value="{{ option.object.pk }}"{% if option.checked %} checked{% endif %}>
+            <span class="avatar-cf mini color-{{ option.object.color_slot }}">{{ option.object.user.initial }}</span>{{ option.object.user.name }}
+          </label>
+        {% endfor %}
+        <label class="pill-cf person">
+          <input type="radio" name="member" value=""{% if not form.member.value %} checked{% endif %}>
+          <span class="avatar-cf mini color-shared">С</span>{% translate "Спільний" %}
+        </label>
+      </div>
+      <p class="field-help">{% translate "Спільний ліміт рахує витрати всієї сім'ї, особистий — тільки цієї людини." %}</p>
+    </fieldset>
+  </div>
+
+  <div class="sheet-foot">
+    {% if limit %}
+      <button class="btn-cf ghost-danger" type="button" hx-post="{% url 'budgets:limit_delete' limit.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+      <span class="sheet-foot-space"></span>
+      <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+      <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+    {% else %}
+      <button class="btn-cf primary wide" type="submit">{% translate "Додати ліміт" %}</button>
+    {% endif %}
+  </div>
+</form>

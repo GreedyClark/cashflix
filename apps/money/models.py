@@ -45,7 +45,8 @@ class Category(models.Model):
     )
     name = models.CharField(_("назва"), max_length=50)
     kind = models.CharField(_("тип"), max_length=10, choices=Kind.choices, default=Kind.EXPENSE)
-    icon = models.CharField(_("іконка"), max_length=40, default="dots")
+    icon = models.CharField(_("іконка"), max_length=40, blank=True, default="dots")
+    emoji = models.CharField(_("емодзі"), max_length=16, blank=True)
     color_slot = models.PositiveSmallIntegerField(_("колір"), default=OTHER_COLOR)
     order = models.PositiveSmallIntegerField(_("порядок"), default=0)
     is_archived = models.BooleanField(_("в архіві"), default=False)
@@ -60,6 +61,10 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def letter(self):
+        return self.name[:1].upper()
 
     @property
     def color_var(self):
@@ -93,13 +98,14 @@ class Account(models.Model):
         SAVINGS = "savings", _("накопичувальний")
         INVESTMENT = "investment", _("інвестиційний")
 
-    class InvestmentType(models.TextChoices):
-        FUND = "fund", _("фонд нерухомості")
-        BONDS = "bonds", _("ОВДП")
-        DEPOSIT = "deposit", _("депозит")
-        STOCKS = "stocks", _("акції")
-        CRYPTO = "crypto", _("криптовалюта")
-        OTHER = "other", _("інше")
+    class YieldMode(models.TextChoices):
+        FIXED = "fixed", _("під відсоток")
+        MARKET = "market", _("ринкова вартість")
+
+    class Payout(models.TextChoices):
+        MONTHLY = "monthly", _("щомісяця")
+        END = "end", _("в кінці терміну")
+        CAPITALIZE = "capitalize", _("капіталізація")
 
     ICONS = {"card": "credit-card", "cash": "cash", "savings": "pig-money", "investment": "chart-line"}
 
@@ -108,9 +114,12 @@ class Account(models.Model):
     )
     name = models.CharField(_("назва"), max_length=50)
     kind = models.CharField(_("тип"), max_length=12, choices=Kind.choices, default=Kind.CARD)
-    investment_type = models.CharField(
-        _("тип інвестиції"), max_length=10, choices=InvestmentType.choices, blank=True
-    )
+    investment_type = models.CharField(_("куди інвестуєте"), max_length=60, blank=True)
+    yield_mode = models.CharField(_("дохідність"), max_length=10, choices=YieldMode.choices, blank=True)
+    annual_rate = models.DecimalField(_("ставка, % річних"), max_digits=5, decimal_places=2, null=True, blank=True)
+    starts_on = models.DateField(_("дата початку"), null=True, blank=True)
+    ends_on = models.DateField(_("дата закінчення"), null=True, blank=True)
+    payout = models.CharField(_("виплата доходу"), max_length=10, choices=Payout.choices, blank=True)
     currency = models.CharField(_("валюта"), max_length=3, choices=Currency.choices, default=Currency.UAH)
     owner = models.ForeignKey(
         Membership,
@@ -146,6 +155,10 @@ class Account(models.Model):
     @property
     def is_investment(self):
         return self.kind == self.Kind.INVESTMENT
+
+    @property
+    def is_fixed_income(self):
+        return self.is_investment and self.yield_mode == self.YieldMode.FIXED
 
     def get_balance(self):
         return Account.objects.with_balance().get(pk=self.pk).balance

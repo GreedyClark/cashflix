@@ -1,0 +1,16 @@
+{% load i18n %}
+<div class="icon-grid" id="icon-grid">
+  <label class="icon-tile letter" title="{% translate 'Перша літера назви' %}">
+    <input type="radio" name="icon" value=""{% if not icons.selected %} checked{% endif %}>
+    <span class="icon-tile-box">Аа</span>
+  </label>
+  {% for icon in icons.items %}
+    <label class="icon-tile" title="{{ icon }}">
+      <input type="radio" name="icon" value="{{ icon }}"{% if icon == icons.selected %} checked{% endif %}>
+      <span class="icon-tile-box"><c-icon :name="icon" /></span>
+    </label>
+  {% endfor %}
+  {% if icons.query and icons.items|length <= 1 %}
+    <p class="bud-hint icon-empty">{% translate "Нічого не знайшлося. Спробуйте інше слово або поставте емодзі." %}</p>
+  {% endif %}
+</div>

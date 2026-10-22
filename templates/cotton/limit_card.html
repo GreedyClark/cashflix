@@ -1,0 +1,42 @@
+{% load i18n money %}
+<c-vars item />
+{% with limit=item.limit currency=request.household.base_currency %}
+<article class="lim-card {{ item.state }}">
+  <div class="lim-top">
+    <span class="tx-icon tone-{{ limit.category.color_slot }}"><c-cat-icon :category="limit.category" /></span>
+    <span class="lim-title">
+      <span class="lim-name">{{ limit.category.name }}</span>
+      <span class="lim-state">
+        {% if item.state == "crit" %}{% blocktranslate with amount=item.over|money:currency %}перевищено на {{ amount }}{% endblocktranslate %}{% elif item.state == "warn" %}{% translate "майже вичерпано" %}{% else %}{% translate "у межах" %}{% endif %}
+      </span>
+    </span>
+    {% if limit.member %}
+      <span class="avatar-cf mini color-{{ limit.member.color_slot }}" title="{{ limit.member.user.name }}">{{ limit.member.user.initial }}</span>
+    {% else %}
+      <span class="acc-shared"><c-icon name="users" />{% translate "спільний" %}</span>
+    {% endif %}
+    <details class="menu-cf acc-menu">
+      <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+      <div class="menu-pop">
+        <button class="menu-item" type="button" hx-get="{% url 'budgets:limit_edit' limit.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
+        <a class="menu-item" href="{% url 'money:transactions' %}?category={{ limit.category.pk }}{% if limit.member %}&member={{ limit.member.pk }}{% endif %}"><c-icon name="receipt" />{% translate "Операції" %}</a>
+        <button class="menu-item danger" type="button" hx-post="{% url 'budgets:limit_delete' limit.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+      </div>
+    </details>
+  </div>
+  <div class="lim-nums num">
+    <b>{{ item.spent|money:currency }}</b>
+    <span>{% blocktranslate with amount=limit.amount|money:currency %}з {{ amount }}{% endblocktranslate %}</span>
+    <em>{{ item.percent }}%</em>
+  </div>
+  <div class="lim-bar"><i style="width: {{ item.bar }}%"></i>{% if item.pace is not None %}<s style="left: {{ item.pace }}%"></s>{% endif %}</div>
+  <div class="lim-foot">
+    {% if item.left >= 0 %}
+      <span>{% blocktranslate with amount=item.left|money:currency %}лишилось {{ amount }}{% endblocktranslate %}</span>
+    {% else %}
+      <span class="bad">{% blocktranslate with amount=item.over|money:currency %}понад ліміт {{ amount }}{% endblocktranslate %}</span>
+    {% endif %}
+    {% if item.average %}<span class="bud-hint">{% blocktranslate with amount=item.average|money:currency %}сер. за 3 міс. {{ amount }}{% endblocktranslate %}</span>{% endif %}
+  </div>
+</article>
+{% endwith %}

@@ -34,7 +34,7 @@
         {% for option in form.category_options %}
           <label class="cat-tile tone-{{ option.object.color_slot }}" data-kind="{{ option.object.kind }}">
             <input type="radio" name="category" value="{{ option.object.pk }}"{% if option.checked %} checked{% endif %}>
-            <span class="tx-icon tone-{{ option.object.color_slot }}"><c-icon :name="option.object.icon" /></span>
+            <span class="tx-icon tone-{{ option.object.color_slot }}"><c-cat-icon :category="option.object" /></span>
             <span class="cat-tile-name">{{ option.object.name }}</span>
           </label>
         {% endfor %}

@@ -1,0 +1,37 @@
+{% load i18n %}
+<div class="field-cf{% if cf.name.errors %} has-error{% endif %}">
+  <label class="f-label" for="cat-name">{% translate "Назва категорії" %}</label>
+  <input type="text" name="name" id="cat-name" value="{{ cf.name.value|default_if_none:'' }}"
+         maxlength="50" placeholder="{% translate 'Наприклад, Тварини' %}" autocomplete="off"
+         hx-get="{% url 'money:icon_grid' %}" hx-trigger="input changed delay:400ms"
+         hx-target="#icon-grid" hx-swap="outerHTML" hx-include="[name=icon_query]" hx-vals='{"trigger": "name"}'>
+  {% for error in cf.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+</div>
+
+<fieldset class="field-cf">
+  <legend class="f-label">{% translate "Колір" %}</legend>
+  <div class="color-row">
+    {% for option in cf.color_options %}
+      <label class="color-dot" style="--dot: var(--cat-{{ option.slot }})">
+        <input type="radio" name="color_slot" value="{{ option.slot }}"{% if option.checked %} checked{% endif %} aria-label="{% blocktranslate with number=option.slot %}Колір {{ number }}{% endblocktranslate %}">
+      </label>
+    {% endfor %}
+  </div>
+</fieldset>
+
+<fieldset class="field-cf">
+  <legend class="f-label">{% translate "Іконка" %}</legend>
+  <label class="search-cf icon-search">
+    <c-icon name="search" />
+    <input type="search" name="icon_query" placeholder="{% translate 'Знайти: спорт, кіт, ремонт…' %}" autocomplete="off"
+           hx-get="{% url 'money:icon_grid' %}" hx-trigger="input changed delay:300ms, search"
+           hx-target="#icon-grid" hx-swap="outerHTML" hx-include="[name=name], [name=icon]:checked">
+  </label>
+  {% include "money/_icon_grid.html" %}
+</fieldset>
+
+<div class="field-cf emoji-field{% if cf.emoji.errors %} has-error{% endif %}">
+  <label class="f-label" for="cat-emoji">{% translate "Або емодзі замість іконки" %}</label>
+  <input type="text" name="emoji" id="cat-emoji" class="emoji-input" value="{{ cf.emoji.value|default_if_none:'' }}" maxlength="16" placeholder="🎣" autocomplete="off">
+  {% for error in cf.emoji.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+</div>

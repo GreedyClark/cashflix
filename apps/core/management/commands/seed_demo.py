@@ -111,9 +111,23 @@ class Command(BaseCommand):
         self.fund = Account.objects.create(
             name="Фонд нерухомості",
             kind=Account.Kind.INVESTMENT,
-            investment_type=Account.InvestmentType.FUND,
+            investment_type="Фонд нерухомості",
+            yield_mode=Account.YieldMode.MARKET,
             owner=self.yura,
             opening_balance=Decimal("20000"),
+            **common,
+        )
+        self.bonds = Account.objects.create(
+            name="ОВДП до 2027",
+            kind=Account.Kind.INVESTMENT,
+            investment_type="ОВДП",
+            yield_mode=Account.YieldMode.FIXED,
+            annual_rate=Decimal("16"),
+            starts_on=self.today - datetime.timedelta(days=95),
+            ends_on=self.today + datetime.timedelta(days=270),
+            payout=Account.Payout.END,
+            owner=self.olya,
+            opening_balance=Decimal("50000"),
             **common,
         )
 

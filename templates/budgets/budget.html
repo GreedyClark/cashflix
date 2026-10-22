@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Бюджет і ліміти" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "Бюджет і ліміти" %}</h1>
+    </div>
+    <div class="page-actions">
+      <a class="btn-cf" href="{% url 'money:categories' %}"><c-icon name="category" />{% translate "Категорії" %}</a>
+      <button class="btn-cf primary" type="button" hx-get="{% url 'budgets:limit_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Ліміт" %}</button>
+    </div>
+  </div>
+
+  <div id="budget" class="budget-page"
+       hx-get="{% url 'budgets:budget' %}?month={{ month|date:'Y-m' }}"
+       hx-trigger="limitsChanged from:body" hx-disinherit="*">
+    {% include "budgets/_budget.html" %}
+  </div>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Ліміт' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
+{% endblock %}

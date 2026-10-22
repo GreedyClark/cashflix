@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from .models import Category
 
 DEFAULT_EXPENSE_CATEGORIES = [
@@ -32,7 +34,6 @@ def create_default_categories(household):
             )
     return Category.objects.bulk_create(rows)
 
-
 SNAPSHOT_FIELDS = [
     "type", "date", "title", "note", "account_id", "amount", "currency", "rate", "amount_base",
     "to_account_id", "to_amount", "category_id", "member_id", "source", "created_by_id", "created_at",
@@ -63,3 +64,17 @@ def restore(household, data):
     Transaction.objects.filter(pk=pk).update(created_at=created_at)
     transaction.created_at = created_at
     return transaction
+
+
+@transaction.atomic
+def merge_categories(source, target):
+    moved = source.transactions.update(category=target)
+    source.recurring_payments.update(category=target)
+    for limit in source.limits.all():
+        if target.limits.filter(member=limit.member).exists():
+            limit.delete()
+        else:
+            limit.category = target
+            limit.save(update_fields=["category"])
+    source.delete()
+    return moved

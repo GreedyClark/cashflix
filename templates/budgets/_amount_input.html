@@ -1,0 +1,3 @@
+{% load i18n %}
+<input class="amount-input num" id="limit-amount" type="text" name="amount" value="{{ form.amount.value|default_if_none:'' }}"
+       inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума на місяць' %}">

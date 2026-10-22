@@ -1,0 +1,18 @@
+{% load i18n money %}
+{% if hints.average or hints.previous %}
+  <div class="hint-row">
+    <span class="bud-hint">{% translate "Підказка:" %}</span>
+    {% if hints.average %}
+      <button class="hint-chip" type="button" hx-get="{% url 'budgets:limit_amount' %}?value={{ hints.average }}" hx-target="#limit-amount" hx-swap="outerHTML">
+        {% blocktranslate with amount=hints.average|money %}сер. за 3 міс. {{ amount }}{% endblocktranslate %}
+      </button>
+    {% endif %}
+    {% if hints.previous %}
+      <button class="hint-chip" type="button" hx-get="{% url 'budgets:limit_amount' %}?value={{ hints.previous }}" hx-target="#limit-amount" hx-swap="outerHTML">
+        {% blocktranslate with amount=hints.previous|money %}минулий місяць {{ amount }}{% endblocktranslate %}
+      </button>
+    {% endif %}
+  </div>
+{% elif hints %}
+  <p class="bud-hint">{% translate "Витрат у цій категорії ще не було, тож підказки немає." %}</p>
+{% endif %}

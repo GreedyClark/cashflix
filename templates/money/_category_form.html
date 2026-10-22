@@ -1,0 +1,32 @@
+{% load i18n %}
+<form class="tx-form category-form" novalidate
+      hx-post="{% if category %}{% url 'money:category_edit' category.pk %}{% else %}{% url 'money:category_create' %}{% endif %}"
+      hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% if category %}{% translate "Категорія" %}{% else %}{% translate "Нова категорія" %}{% endif %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    {% if form.kind.field.disabled %}
+      <input type="hidden" name="kind" value="{{ form.kind.value }}">
+      <p class="bud-hint">{% if form.kind.value == "income" %}{% translate "Категорія доходів" %}{% else %}{% translate "Категорія витрат" %}{% endif %}</p>
+    {% else %}
+      <div class="seg-cf full">
+        {% for radio in form.kind %}<label>{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+      </div>
+    {% endif %}
+    {% include "money/_category_fields.html" with cf=form %}
+  </div>
+
+  <div class="sheet-foot">
+    {% if category %}
+      <span class="sheet-foot-space"></span>
+      <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+      <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+    {% else %}
+      <button class="btn-cf primary wide" type="submit">{% translate "Додати категорію" %}</button>
+    {% endif %}
+  </div>
+</form>

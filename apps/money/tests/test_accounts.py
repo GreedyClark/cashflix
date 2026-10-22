@@ -23,7 +23,7 @@ def yura_client(client, yura):
 @pytest.fixture
 def fund(home, yura):
     return Account.objects.create(
-        household=home, name="Фонд нерухомості", kind="investment", investment_type="fund", owner=yura,
+        household=home, name="Фонд нерухомості", kind="investment", investment_type="Фонд нерухомості", yield_mode="market", owner=yura,
         opening_balance=Decimal("20000"),
     )
 
@@ -72,10 +72,90 @@ def test_create_account_with_comma_balance(yura_client, home, yura):
     assert account.investment_type == ""
 
 
-def test_investment_without_type_gets_other(yura_client, home):
-    yura_client.post(reverse("money:account_create"), {"name": "ОВДП", "kind": "investment", "currency": "UAH", "owner": ""})
+def bonds_account(home, payout, **fields):
+    return Account.objects.create(
+        household=home, name="ОВДП", kind="investment", investment_type="ОВДП", yield_mode="fixed",
+        annual_rate=Decimal("16"), starts_on=datetime.date(2026, 1, 1), ends_on=datetime.date(2027, 1, 1),
+        payout=payout, opening_balance=Decimal("36500"), **fields,
+    )
 
-    assert home.accounts.get(name="ОВДП").investment_type == "other"
+
+def test_fixed_interest_accrues_by_day(home):
+    account = bonds_account(home, "end")
+
+    investment = investment_for(Account.objects.with_balance().get(pk=account.pk), datetime.date(2026, 4, 11))
+
+    assert investment.accrued == Decimal("1600.00")
+    assert investment.value == Decimal("38100.00")
+    assert investment.expected == Decimal("42340.00")
+    assert investment.days_left == 265
+
+
+def test_fixed_interest_counts_each_deposit_from_its_date(home, mono):
+    account = bonds_account(home, "end")
+    Transaction.objects.create(
+        household=home, type="transfer", account=mono, to_account=account, amount=Decimal("36500"), title="Поповнення",
+        date=datetime.date(2026, 3, 1),
+    )
+
+    investment = investment_for(Account.objects.with_balance().get(pk=account.pk), datetime.date(2026, 3, 11))
+
+    assert investment.invested == Decimal("73000")
+    assert investment.accrued == Decimal("1264.00")
+
+
+def test_monthly_payout_keeps_value_at_invested(home):
+    account = bonds_account(home, "monthly")
+
+    investment = investment_for(Account.objects.with_balance().get(pk=account.pk), datetime.date(2026, 4, 10))
+
+    assert investment.value == Decimal("36500")
+    assert investment.monthly == Decimal("486.67")
+    assert investment.expected is None
+
+
+def test_capitalization_grows_faster(home):
+    simple = investment_for(Account.objects.with_balance().get(pk=bonds_account(home, "end").pk), datetime.date(2027, 1, 1))
+    compound = investment_for(Account.objects.with_balance().get(pk=bonds_account(home, "capitalize").pk), datetime.date(2027, 1, 1))
+
+    assert compound.accrued > simple.accrued
+    assert compound.accrued == compound.expected - compound.invested
+
+
+def test_create_fixed_investment(yura_client, home):
+    response = yura_client.post(reverse("money:account_create"), {
+        "name": "Депозит", "kind": "investment", "investment_type": "Депозит", "yield_mode": "fixed",
+        "annual_rate": "14,5", "starts_on": "2026-10-01", "ends_on": "2027-04-01", "payout": "monthly",
+        "currency": "UAH", "owner": "", "opening_balance": "20 000",
+    })
+
+    assert response["HX-Reswap"] == "none"
+    account = home.accounts.get(name="Депозит")
+    assert account.annual_rate == Decimal("14.5")
+    assert account.payout == "monthly"
+
+
+def test_fixed_investment_needs_rate_and_valid_dates(yura_client, home):
+    response = yura_client.post(reverse("money:account_create"), {
+        "name": "Депозит", "kind": "investment", "yield_mode": "fixed",
+        "starts_on": "2026-10-01", "ends_on": "2026-09-01", "currency": "UAH", "owner": "",
+    })
+
+    form = response.context["form"]
+    assert set(form.errors) == {"annual_rate", "ends_on"}
+    assert not home.accounts.filter(name="Депозит").exists()
+
+
+def test_market_investment_drops_fixed_fields(yura_client, home):
+    yura_client.post(reverse("money:account_create"), {
+        "name": "Акції", "kind": "investment", "investment_type": "Акції", "yield_mode": "market",
+        "annual_rate": "10", "starts_on": "2026-10-01", "currency": "UAH", "owner": "",
+    })
+
+    account = home.accounts.get(name="Акції")
+    assert account.annual_rate is None
+    assert account.starts_on is None
+    assert account.investment_type == "Акції"
 
 
 def test_archive_and_restore(yura_client, mono):

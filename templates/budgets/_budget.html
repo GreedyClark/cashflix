@@ -1,0 +1,74 @@
+{% load i18n money %}
+{% with currency=request.household.base_currency %}
+<nav class="month-nav" aria-label="{% translate 'Місяць' %}">
+  <a class="icon-btn" href="?month={{ previous_month }}" hx-get="?month={{ previous_month }}" hx-target="#budget" hx-push-url="true" aria-label="{% translate 'Попередній місяць' %}"><c-icon name="chevron-left" /></a>
+  <span class="month-label">{{ month|date:"F Y" }}</span>
+  {% if next_month %}
+    <a class="icon-btn" href="?month={{ next_month }}" hx-get="?month={{ next_month }}" hx-target="#budget" hx-push-url="true" aria-label="{% translate 'Наступний місяць' %}"><c-icon name="chevron-right" /></a>
+  {% endif %}
+</nav>
+
+{% if limits %}
+  <section class="panel bud-sum">
+    <div class="bud-kpis">
+      <div>
+        <p class="eyebrow">{% translate "Заплановано" %}</p>
+        <div class="bud-value num">{{ summary.planned|money:currency }}</div>
+      </div>
+      <div>
+        <p class="eyebrow">{% translate "Витрачено" %}</p>
+        <div class="bud-value num">{{ summary.spent|money:currency }}</div>
+        <span class="bud-hint">{% blocktranslate with percent=summary.percent pace=summary.pace %}{{ percent }}% ліміту · {{ pace }}% місяця{% endblocktranslate %}</span>
+      </div>
+      <div>
+        <p class="eyebrow">{% if summary.left >= 0 %}{% translate "Лишилось" %}{% else %}{% translate "Перевищено" %}{% endif %}</p>
+        <div class="bud-value num {% if summary.left >= 0 %}good{% else %}bad{% endif %}">{{ summary.left|absolute|money:currency }}</div>
+        {% if summary.per_day %}
+          <span class="bud-hint">{% blocktranslate with amount=summary.per_day|money:currency days=summary.days_left %}≈ {{ amount }} на день · ще {{ days }} дн.{% endblocktranslate %}</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="lim-bar big{% if summary.percent > 100 %} crit{% endif %}">
+      <i style="width: {{ summary.bar }}%"></i>
+      {% if is_current %}<s style="left: {{ summary.pace }}%"><span>{% translate "сьогодні" %}</span></s>{% endif %}
+    </div>
+    <p class="bud-note">
+      {% if summary.over %}
+        {% blocktranslate with names=summary.over|join:", " %}Понад ліміт: {{ names }}.{% endblocktranslate %}
+      {% endif %}
+      {% if summary.close %}
+        {% blocktranslate with names=summary.close|join:", " %}Близько до межі: {{ names }}.{% endblocktranslate %}
+      {% endif %}
+      {% if not summary.over and not summary.close %}
+        {% if is_current %}{% translate "Усі ліміти в межах." %}{% else %}{% translate "Усі ліміти дотримано." %}{% endif %}
+      {% endif %}
+    </p>
+  </section>
+
+  <div class="lim-grid">
+    {% for item in limits %}<c-limit-card :item="item" />{% endfor %}
+  </div>
+{% else %}
+  <c-empty icon="report-money" title="{% translate 'Лімітів ще немає' %}">{% translate "Поставте ліміт на категорію, і тут буде видно, скільки ще можна витратити до кінця місяця." %}</c-empty>
+{% endif %}
+
+{% if free %}
+  <section class="panel free-box">
+    <div class="free-head">
+      <h2>{% translate "Без ліміту" %}</h2>
+      <span class="bud-hint">{% translate "витрати в цих категоріях не обмежені" %}</span>
+    </div>
+    <ul class="free-list">
+      {% for item in free %}
+        <li class="free-row">
+          <span class="tx-icon tone-{{ item.category.color_slot }}"><c-cat-icon :category="item.category" /></span>
+          <span class="free-name">{{ item.category.name }}</span>
+          <span class="bud-hint num">{% blocktranslate with amount=item.spent|money:currency %}за місяць {{ amount }}{% endblocktranslate %}</span>
+          <span class="bud-hint num free-avg">{% if item.average %}{% blocktranslate with amount=item.average|money:currency %}сер. {{ amount }}{% endblocktranslate %}{% endif %}</span>
+          <button class="btn-cf sm" type="button" hx-get="{% url 'budgets:limit_create' %}?category={{ item.category.pk }}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Ліміт" %}</button>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endif %}
+{% endwith %}

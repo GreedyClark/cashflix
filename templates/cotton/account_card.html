@@ -6,7 +6,7 @@
     <span class="tx-icon tone-{{ account.tone }}"><c-icon :name="account.icon" /></span>
     <span class="acc-title">
       <span class="acc-name">{{ account.name }}</span>
-      <span class="acc-kind">{% if account.is_investment %}{{ account.get_investment_type_display }}{% else %}{{ account.get_kind_display }}{% endif %}</span>
+      {% if not account.is_investment %}<span class="acc-kind">{{ account.get_kind_display }}</span>{% elif account.investment_type and account.investment_type|lower != account.name|lower %}<span class="acc-kind">{{ account.investment_type }}</span>{% endif %}
     </span>
     {% if account.owner %}
       <span class="avatar-cf mini color-{{ account.owner.color_slot }}" title="{{ account.owner.user.name }}">{{ account.owner.user.initial }}</span>
@@ -17,7 +17,7 @@
       <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
       <div class="menu-pop">
         <button class="menu-item" type="button" hx-get="{% url 'money:account_edit' account.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
-        {% if account.is_investment %}
+        {% if account.is_investment and not account.is_fixed_income %}
           <button class="menu-item" type="button" hx-get="{% url 'money:valuation_create' account.pk %}" hx-target="#tx-dialog-body"><c-icon name="chart-line" />{% translate "Оновити вартість" %}</button>
         {% endif %}
         {% if not account.is_archived %}
@@ -30,7 +30,10 @@
 
   <div class="acc-balance num">{{ account.value|money:account.currency }}</div>
   <div class="acc-sub">
-    {% if account.investment %}
+    {% if account.investment and account.is_fixed_income %}
+      {% blocktranslate with amount=account.investment.invested|money:account.currency rate=account.annual_rate|floatformat:"-2" %}{{ amount }} під {{ rate }}%{% endblocktranslate %}
+      · <span class="good">{% if account.investment.monthly %}{% translate "отримано" %}{% else %}{% translate "нараховано" %}{% endif %} +{{ account.investment.accrued|money:account.currency }}</span>
+    {% elif account.investment %}
       {% blocktranslate with amount=account.investment.invested|money:account.currency %}вкладено {{ amount }}{% endblocktranslate %}
       {% if account.investment.invested %}· <span class="{% if account.investment.profit >= 0 %}good{% else %}bad{% endif %}">{% if account.investment.profit >= 0 %}+{% endif %}{{ account.investment.profit|money:account.currency }} ({{ account.investment.percent }}%)</span>{% endif %}
     {% elif account.currency != request.household.base_currency and account.converted is not None %}
@@ -39,7 +42,16 @@
   </div>
 
   <div class="acc-flow num">
-    {% if account.investment %}
+    {% if account.investment and account.is_fixed_income %}
+      {% if account.investment.monthly %}
+        <span>{% blocktranslate with amount=account.investment.monthly|money:account.currency %}щомісяця ≈ {{ amount }}{% endblocktranslate %}</span>
+      {% elif account.investment.expected %}
+        <span>{% blocktranslate with amount=account.investment.expected|money:account.currency %}в кінці ≈ {{ amount }}{% endblocktranslate %}</span>
+      {% else %}
+        <span>{{ account.get_payout_display|capfirst }}</span>
+      {% endif %}
+      <span class="acc-flow-label"{% if account.ends_on %} title="{% blocktranslate with date=account.ends_on|date:'j E Y' %}до {{ date }}{% endblocktranslate %}"{% endif %}>{% if account.ends_on %}{% if account.investment.days_left %}{% blocktranslate with days=account.investment.days_left %}ще {{ days }} дн.{% endblocktranslate %}{% else %}{% translate "термін завершився" %}{% endif %}{% else %}{% translate "без терміну" %}{% endif %}</span>
+    {% elif account.investment %}
       <span>{% blocktranslate with amount=account.investment.payouts|money:account.currency %}виплати {{ amount }}{% endblocktranslate %}</span>
       <span class="acc-flow-label">{% if account.investment.valued_on %}{% blocktranslate with date=account.investment.valued_on|date:"j E" %}оцінка {{ date }}{% endblocktranslate %}{% else %}{% translate "вартість не оновлювали" %}{% endif %}</span>
     {% else %}

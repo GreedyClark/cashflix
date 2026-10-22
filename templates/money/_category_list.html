@@ -1,0 +1,61 @@
+{% load i18n money %}
+{% if archived %}
+  <div class="archive-head">
+    <a class="btn-cf" href="{% url 'money:categories' %}"><c-icon name="chevron-left" />{% translate "Усі категорії" %}</a>
+    <p class="panel-text">{% translate "Сховані категорії не показуються у формах, але їхні операції лишаються в історії та статистиці." %}</p>
+  </div>
+{% endif %}
+
+{% for group in groups %}
+  {% if group.items or not archived %}
+    <section class="panel cat-group">
+      <div class="cat-group-head">
+        <h2>{{ group.title }}</h2>
+        <span class="bud-hint">{% blocktranslate count counter=group.items|length %}{{ counter }} категорія{% plural %}{{ counter }} категорій{% endblocktranslate %}</span>
+        {% if not archived %}
+          <button class="btn-cf sm" type="button" hx-get="{% url 'money:category_create' %}?kind={{ group.kind }}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Додати" %}</button>
+        {% endif %}
+      </div>
+      <ul class="cat-list">
+        {% for category in group.items %}
+          <li class="cat-row">
+            <span class="tx-icon tone-{{ category.color_slot }}"><c-cat-icon :category="category" /></span>
+            <span class="cat-row-main">
+              <span class="cat-row-name">{{ category.name }}</span>
+              <span class="bud-hint">
+                {% blocktranslate count counter=category.count %}{{ counter }} операція{% plural %}{{ counter }} операцій{% endblocktranslate %}{% if category.limit_count %} · {% translate "є ліміт" %}{% endif %}{% if category.payment_count %} · {% translate "є регулярні платежі" %}{% endif %}
+              </span>
+            </span>
+            <span class="cat-row-month num">
+              {% if category.month_total %}{{ category.month_total|money:request.household.base_currency }}{% endif %}
+            </span>
+            <details class="menu-cf acc-menu">
+              <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+              <div class="menu-pop">
+                <button class="menu-item" type="button" hx-get="{% url 'money:category_edit' category.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
+                {% if category.count %}
+                  <a class="menu-item" href="{% url 'money:transactions' %}?category={{ category.pk }}"><c-icon name="receipt" />{% translate "Операції" %}</a>
+                {% endif %}
+                {% if not archived %}
+                  <button class="menu-item" type="button" hx-get="{% url 'money:category_merge' category.pk %}" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Об'єднати з…" %}</button>
+                {% endif %}
+                <button class="menu-item" type="button" hx-post="{% url 'money:category_archive' category.pk %}" hx-swap="none"><c-icon name="archive" />{% if archived %}{% translate "Повернути" %}{% else %}{% translate "Сховати в архів" %}{% endif %}</button>
+                {% if category.can_delete %}
+                  <button class="menu-item danger" type="button" hx-post="{% url 'money:category_delete' category.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+                {% endif %}
+              </div>
+            </details>
+          </li>
+        {% empty %}
+          <li class="cat-empty bud-hint">{% translate "Категорій ще немає." %}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+{% endfor %}
+
+{% if not archived and archived_count %}
+  <a class="acc-archived" href="{% url 'money:categories' %}?archived=1">
+    <c-icon name="archive" />{% blocktranslate count counter=archived_count %}{{ counter }} категорія в архіві{% plural %}{{ counter }} категорій в архіві{% endblocktranslate %}<span>{% translate "Показати" %}</span>
+  </a>
+{% endif %}

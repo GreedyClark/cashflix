@@ -144,7 +144,7 @@
         <ul class="cat-list">
           {% for item in categories %}
             <li>
-              <span class="tx-icon tone-{{ item.category.color_slot }}"><c-icon :name="item.category.icon" /></span>
+              <span class="tx-icon tone-{{ item.category.color_slot }}"><c-cat-icon :category="item.category" /></span>
               <span class="cat-list-name">{{ item.category.name }}</span>
               <span class="num">{{ item.amount|money:currency }}</span>
               <span class="cat-change num">{% if item.change is None %}{% elif item.change > 0 %}<em class="bad">↑{{ item.change }}%</em>{% elif item.change < 0 %}<em class="good">↓{{ item.change|absolute }}%</em>{% else %}≈{% endif %}</span>
@@ -166,7 +166,7 @@
         <ul class="limit-list">
           {% for item in limits %}
             <li class="limit-row">
-              <span class="tx-icon tone-{{ item.limit.category.color_slot }}"><c-icon :name="item.limit.category.icon" /></span>
+              <span class="tx-icon tone-{{ item.limit.category.color_slot }}"><c-cat-icon :category="item.limit.category" /></span>
               <div class="limit-body">
                 <div class="limit-top">
                   <span class="limit-name">{{ item.limit.category.name }}</span>
@@ -181,7 +181,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="panel-text">{% translate "Лімітів ще немає. Налаштування лімітів з'явиться в розділі «Бюджет і ліміти»." %}</p>
+        <p class="panel-text">{% translate "Лімітів ще немає." %} <a href="{% url 'budgets:budget' %}">{% translate "Поставити ліміт" %}</a></p>
       {% endif %}
     </div>
   </section>

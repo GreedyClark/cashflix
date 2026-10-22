@@ -22,12 +22,47 @@
       </div>
     </fieldset>
 
-    <fieldset class="field-cf investment-only">
-      <legend class="f-label">{% translate "Куди інвестуєте" %}</legend>
-      <div class="pill-row">
-        {% for radio in form.investment_type %}<label class="pill-cf">{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+    <div class="investment-only invest-box">
+      <div class="field-cf">
+        <label class="f-label" for="{{ form.investment_type.id_for_label }}">{% translate "Куди інвестуєте" %}</label>
+        {{ form.investment_type }}
+        <datalist id="investment-suggestions">{% for item in form.SUGGESTIONS %}<option value="{{ item }}">{% endfor %}</datalist>
       </div>
-    </fieldset>
+
+      <fieldset class="field-cf">
+        <legend class="f-label">{% translate "Як рахувати дохід" %}</legend>
+        <div class="seg-cf full">
+          {% for radio in form.yield_mode %}<label>{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+        </div>
+        <p class="field-help fixed-only">{% translate "Депозит, ОВДП або фонд із відомою ставкою. Дохід рахується сам щодня." %}</p>
+        <p class="field-help market-only">{% translate "Акції, криптовалюта. Вартість оновлюєте вручну, коли захочете." %}</p>
+      </fieldset>
+
+      <div class="fixed-only invest-fixed">
+        <div class="field-cf{% if form.annual_rate.errors %} has-error{% endif %}">
+          <label class="f-label" for="{{ form.annual_rate.id_for_label }}">{% translate "Ставка" %}</label>
+          <div class="suffix-input">{{ form.annual_rate }}<span>{% translate "% річних" %}</span></div>
+          {% for error in form.annual_rate.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field-cf{% if form.starts_on.errors %} has-error{% endif %}">
+          <label class="f-label" for="{{ form.starts_on.id_for_label }}">{% translate "Початок" %}</label>
+          {{ form.starts_on }}
+          {% for error in form.starts_on.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+        <div class="field-cf{% if form.ends_on.errors %} has-error{% endif %}">
+          <label class="f-label" for="{{ form.ends_on.id_for_label }}">{% translate "Закінчення" %}</label>
+          {{ form.ends_on }}
+          {% for error in form.ends_on.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        </div>
+      </div>
+
+      <fieldset class="field-cf fixed-only">
+        <legend class="f-label">{% translate "Виплата доходу" %}</legend>
+        <div class="pill-row">
+          {% for radio in form.payout %}<label class="pill-cf">{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+        </div>
+      </fieldset>
+    </div>
 
     <fieldset class="field-cf">
       <legend class="f-label">{% translate "Валюта" %}</legend>
@@ -56,7 +91,7 @@
     <div class="field-cf{% if form.opening_balance.errors %} has-error{% endif %}">
       <label class="f-label" for="{{ form.opening_balance.id_for_label }}">
         <span class="investment-hide">{% translate "Залишок на початку обліку" %}</span>
-        <span class="investment-only">{% translate "Вже вкладено до початку обліку" %}</span>
+        <span class="investment-only"><span class="fixed-only">{% translate "Сума вкладу" %}</span><span class="market-only">{% translate "Вже вкладено до початку обліку" %}</span></span>
       </label>
       {{ form.opening_balance }}
       {% for error in form.opening_balance.errors %}<p class="field-error">{{ error }}</p>{% endfor %}

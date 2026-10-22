@@ -12,7 +12,9 @@
       {% else %}
         <label class="chip-option">
           <input type="radio" name="{{ menu.name }}" value="{{ option.value }}"{% if option.checked %} checked{% endif %}>
-          {% if option.icon %}
+          {% if option.category %}
+            <span class="chip-option-icon tone-{{ option.tone }}"><c-cat-icon :category="option.category" /></span>
+          {% elif option.icon %}
             <span class="chip-option-icon tone-{{ option.tone }}"><c-icon :name="option.icon" /></span>
           {% elif option.initial %}
             <span class="avatar-cf mini color-{{ option.color }}">{{ option.initial }}</span>

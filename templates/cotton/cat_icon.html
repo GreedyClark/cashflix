@@ -1,0 +1,2 @@
+<c-vars category />
+{% if category.emoji %}<span class="cat-emoji" aria-hidden="true">{{ category.emoji }}</span>{% elif category.icon %}<c-icon :name="category.icon" />{% else %}<span class="cat-letter" aria-hidden="true">{{ category.letter }}</span>{% endif %}
