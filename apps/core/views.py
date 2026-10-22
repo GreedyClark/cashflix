@@ -1,3 +1,5 @@
+import hmac
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
@@ -7,6 +9,7 @@ from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from .daily import run_daily
 from .demo import USERS
 
 from .dashboard import Overview
@@ -59,3 +62,11 @@ def demo_login(request):
 @login_not_required
 def health(request):
     return HttpResponse("ok", content_type="text/plain")
+
+
+@login_not_required
+def daily_task(request, secret):
+    expected = settings.CRON_SECRET
+    if not expected or not hmac.compare_digest(secret, expected):
+        raise Http404
+    return HttpResponse("\n".join(run_daily()), content_type="text/plain")

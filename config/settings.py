@@ -11,9 +11,14 @@ environ.Env.read_env(BASE_DIR / ".env")
 SECRET_KEY = env("SECRET_KEY")
 ENCRYPTION_KEY = env("ENCRYPTION_KEY", default="")
 GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-latest")
+CRON_SECRET = env("CRON_SECRET", default="")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+RENDER_HOST = env("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_HOST:
+    ALLOWED_HOSTS.append(RENDER_HOST)
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_HOST}")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -149,7 +154,6 @@ SOCIALACCOUNT_PROVIDERS = {
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="CashFlix <noreply@cashflix.local>")
 if not DEBUG:
-    ALLOWED_HOSTS.append("healthcheck.railway.app")
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SECURE_REDIRECT_EXEMPT = [r"^health/$"]
