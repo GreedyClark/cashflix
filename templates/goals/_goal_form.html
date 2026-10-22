@@ -1,0 +1,62 @@
+{% load i18n %}
+<form class="tx-form goal-form" novalidate
+      hx-post="{% if goal %}{% url 'goals:goal_edit' goal.pk %}{% else %}{% url 'goals:goal_create' %}{% endif %}"
+      hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% if goal %}{% translate "Ціль" %}{% else %}{% translate "Нова ціль" %}{% endif %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    <div class="field-cf{% if form.target_amount.errors %} has-error{% endif %}">
+      <label class="amount-field">
+        <input class="amount-input num" type="text" name="target_amount" value="{{ form.target_amount.value|default_if_none:'' }}"
+               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Скільки потрібно' %}">
+        <span class="amount-cur"></span>
+      </label>
+      {% for error in form.target_amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    <div class="field-cf{% if form.deadline.errors %} has-error{% endif %}">
+      <label class="f-label" for="{{ form.deadline.id_for_label }}">{% translate "До коли, необов'язково" %}</label>
+      {{ form.deadline }}
+      <p class="field-help">{% translate "З датою CashFlix порахує, скільки відкладати щомісяця." %}</p>
+    </div>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Як рахувати відкладене" %}</legend>
+      <div class="seg-cf full">
+        {% for radio in form.mode %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}
+      </div>
+      <p class="field-help manual-only">{% translate "Записуєте внески самі: «відклав 2 000». Підходить, коли окремого рахунку під ціль немає." %}</p>
+      <p class="field-help account-only">{% translate "Відкладено стільки, скільки зараз на рахунку. Поповнюєте звичайним переказом." %}</p>
+    </fieldset>
+
+    <fieldset class="field-cf account-only{% if form.account.errors %} has-error{% endif %}">
+      <legend class="f-label">{% translate "Рахунок" %}</legend>
+      <div class="pill-row">
+        {% for option in form.account_options %}
+          <label class="pill-cf">
+            <input type="radio" name="account" value="{{ option.object.pk }}" data-currency="{{ option.object.currency }}"{% if option.checked %} checked{% endif %}>
+            <c-icon :name="option.object.icon" />{{ option.object.name }}
+          </label>
+        {% endfor %}
+      </div>
+      {% for error in form.account.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </fieldset>
+
+    {% translate "Назва цілі" as name_label %}{% translate "Наприклад, Відпустка" as name_placeholder %}
+    {% include "money/_category_fields.html" with cf=form name_label=name_label name_placeholder=name_placeholder %}
+  </div>
+
+  <div class="sheet-foot">
+    {% if goal %}
+      <span class="sheet-foot-space"></span>
+      <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+      <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+    {% else %}
+      <button class="btn-cf primary wide" type="submit">{% translate "Додати ціль" %}</button>
+    {% endif %}
+  </div>
+</form>

@@ -4384,3 +4384,67 @@ a.bar-col:hover i {
 .upcoming-row:first-child {
   border-top: 0;
 }
+
+.goal-page {
+  display: grid;
+  gap: 16px;
+}
+
+.goal-card.done {
+  border-color: color-mix(in srgb, var(--good) 40%, var(--hairline));
+}
+
+.goal-card.done .lim-bar i {
+  background: var(--good);
+}
+
+.goal-card.done .lim-state,
+.lim-foot .good {
+  color: var(--good);
+}
+
+.goal-card.crit .lim-bar i {
+  background: var(--warn);
+}
+
+.goal-form:not(:has([name="mode"][value="account"]:checked)) .account-only,
+.goal-form:has([name="mode"][value="account"]:checked) .manual-only {
+  display: none;
+}
+
+.goal-form input[type="text"],
+.goal-form input[type="search"],
+.goal-form input[type="date"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.goal-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.goal-history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+  color: var(--ink-subtle);
+}
+
+.goal-history li:first-child {
+  border-top: 0;
+}
+
+.goal-history b {
+  color: var(--ink);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.goal-history b.plus {
+  color: var(--good);
+}

@@ -109,7 +109,7 @@ def transaction_form(request, transaction=None, initial=None):
 
 
 def transaction_create(request):
-    initial = {name: request.GET[name] for name in ("type", "account") if request.GET.get(name)}
+    initial = {name: request.GET[name] for name in ("type", "account", "to_account") if request.GET.get(name)}
     return transaction_form(request, initial=initial)
 
 

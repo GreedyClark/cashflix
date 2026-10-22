@@ -251,13 +251,14 @@ class Command(BaseCommand):
 
     def create_goals(self):
         rows = [
-            ("Відпустка влітку", "beach", "60000", add_months(self.today, 8), [3000, 4500, 2000, 5000, 3900, 5000]),
-            ("Подушка безпеки", "shield-check", "120000", add_months(self.today, 5), [8000, 6000, 9000, 7000, 6500, 7500]),
-            ("Новий ноутбук", "device-laptop", "45000", add_months(self.today, 2), [4000, 5000, 6000, 5000, 6000, 5000]),
+            ("Відпустка влітку", "beach", 1, "60000", add_months(self.today, 8), [3000, 4500, 2000, 5000, 3900, 5000]),
+            ("Подушка безпеки", "shield-check", 3, "120000", add_months(self.today, 5), [8000, 6000, 9000, 7000, 6500, 7500]),
+            ("Новий ноутбук", "device-laptop", 7, "45000", add_months(self.today, 2), [4000, 5000, 6000, 5000, 6000, 5000]),
         ]
-        for name, icon, target, deadline, history in rows:
+        for name, icon, color, target, deadline, history in rows:
             goal = Goal.objects.create(
-                household=self.home, name=name, icon=icon, target_amount=Decimal(target), deadline=deadline
+                household=self.home, name=name, icon=icon, color_slot=color, target_amount=Decimal(target),
+                deadline=deadline,
             )
             for months_ago, amount in enumerate(reversed(history)):
                 GoalContribution.objects.create(
@@ -266,3 +267,7 @@ class Command(BaseCommand):
                     amount=Decimal(amount),
                     member=self.rng.choice([self.yura, self.olya]),
                 )
+        Goal.objects.create(
+            household=self.home, name="Долари на чорний день", icon="currency-dollar", color_slot=4,
+            target_amount=Decimal("1000"), account=self.usd,
+        )

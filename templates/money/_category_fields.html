@@ -1,8 +1,8 @@
 {% load i18n %}
 <div class="field-cf{% if cf.name.errors %} has-error{% endif %}">
-  <label class="f-label" for="cat-name">{% translate "Назва категорії" %}</label>
+  <label class="f-label" for="cat-name">{% if name_label %}{{ name_label }}{% else %}{% translate "Назва категорії" %}{% endif %}</label>
   <input type="text" name="name" id="cat-name" value="{{ cf.name.value|default_if_none:'' }}"
-         maxlength="50" placeholder="{% translate 'Наприклад, Тварини' %}" autocomplete="off"
+         maxlength="50" placeholder="{% if name_placeholder %}{{ name_placeholder }}{% else %}{% translate 'Наприклад, Тварини' %}{% endif %}" autocomplete="off"
          hx-get="{% url 'money:icon_grid' %}" hx-trigger="input changed delay:400ms"
          hx-target="#icon-grid" hx-swap="outerHTML" hx-include="[name=icon_query]" hx-vals='{"trigger": "name"}'>
   {% for error in cf.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}

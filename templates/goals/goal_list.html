@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Цілі" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "Цілі" %}</h1>
+    </div>
+    <div class="page-actions">
+      <button class="btn-cf primary" type="button" hx-get="{% url 'goals:goal_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Ціль" %}</button>
+    </div>
+  </div>
+
+  <div id="goals" class="goal-page"
+       hx-get="{% url 'goals:goals' %}{% if archived %}?archived=1{% endif %}"
+       hx-trigger="goalsChanged from:body, accountsChanged from:body" hx-disinherit="*">
+    {% include "goals/_goal_list.html" %}
+  </div>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Ціль' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
+{% endblock %}

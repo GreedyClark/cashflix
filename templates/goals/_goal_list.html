@@ -1,0 +1,97 @@
+{% load i18n money %}
+{% with currency=request.household.base_currency %}
+{% if archived %}
+  <div class="archive-head">
+    <a class="btn-cf" href="{% url 'goals:goals' %}"><c-icon name="chevron-left" />{% translate "Усі цілі" %}</a>
+    <p class="panel-text">{% translate "Досягнуті й відкладені цілі. Їхні внески лишаються в історії." %}</p>
+  </div>
+{% elif items %}
+  <section class="panel bud-sum">
+    <div class="bud-kpis">
+      <div>
+        <p class="eyebrow">{% translate "Відкладено" %}</p>
+        <div class="bud-value num">{{ saved|money:currency }}</div>
+        <span class="bud-hint">{% blocktranslate with amount=target|money:currency %}з {{ amount }} на всі цілі{% endblocktranslate %}</span>
+      </div>
+      <div>
+        <p class="eyebrow">{% translate "Щомісяця, щоб встигнути" %}</p>
+        <div class="bud-value num">{{ monthly|money:currency }}</div>
+        <span class="bud-hint">{% translate "для цілей з датою" %}</span>
+      </div>
+      <div>
+        <p class="eyebrow">{% translate "Досягнуто" %}</p>
+        <div class="bud-value num{% if done_count %} good{% endif %}">{{ done_count }} / {{ items|length }}</div>
+        <span class="bud-hint">{% translate "цілей" %}</span>
+      </div>
+    </div>
+  </section>
+{% endif %}
+
+{% if items %}
+  <div class="lim-grid">
+    {% for item in items %}
+      {% with goal=item.goal %}
+      <article class="lim-card goal-card{% if item.done %} done{% elif item.overdue %} crit{% endif %}">
+        <div class="lim-top">
+          <span class="tx-icon tone-{{ goal.color_slot }}"><c-cat-icon :category="goal" /></span>
+          <span class="lim-title">
+            <span class="lim-name">{{ goal.name }}</span>
+            <span class="lim-state">
+              {% if item.done %}{% translate "досягнуто" %}
+              {% elif item.overdue %}{% blocktranslate with date=goal.deadline|date:"j E Y" %}термін минув {{ date }}{% endblocktranslate %}
+              {% elif goal.deadline %}{% blocktranslate with date=goal.deadline|date:"j E Y" %}до {{ date }}{% endblocktranslate %}
+              {% else %}{% translate "без терміну" %}{% endif %}
+            </span>
+          </span>
+          <details class="menu-cf acc-menu">
+            <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+            <div class="menu-pop">
+              {% if not archived %}
+                {% if goal.tracks_account %}
+                  <button class="menu-item" type="button" hx-get="{% url 'money:transaction_create' %}?type=transfer&to_account={{ goal.account_id }}" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Поповнити переказом" %}</button>
+                {% else %}
+                  <button class="menu-item" type="button" hx-get="{% url 'goals:contribution_create' goal.pk %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Внесок" %}</button>
+                {% endif %}
+              {% endif %}
+              <button class="menu-item" type="button" hx-get="{% url 'goals:goal_edit' goal.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
+              <button class="menu-item" type="button" hx-post="{% url 'goals:goal_archive' goal.pk %}" hx-swap="none"><c-icon name="archive" />{% if archived %}{% translate "Повернути" %}{% else %}{% translate "В архів" %}{% endif %}</button>
+              <button class="menu-item danger" type="button" hx-post="{% url 'goals:goal_delete' goal.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+            </div>
+          </details>
+        </div>
+        <div class="lim-nums num">
+          <b>{{ item.saved|money:goal.currency }}</b>
+          <span>{% blocktranslate with amount=goal.target_amount|money:goal.currency %}з {{ amount }}{% endblocktranslate %}</span>
+          <em>{{ item.progress }}%</em>
+        </div>
+        <div class="lim-bar goal-bar"><i style="width: {{ item.progress }}%"></i></div>
+        <div class="lim-foot">
+          {% if item.done %}
+            <span class="good">{% translate "Ціль досягнуто" %}</span>
+          {% elif item.monthly %}
+            <span>{% blocktranslate with amount=item.monthly|money:goal.currency %}{{ amount }} на місяць{% endblocktranslate %}</span>
+          {% else %}
+            <span>{% blocktranslate with amount=item.left|money:goal.currency %}лишилось {{ amount }}{% endblocktranslate %}</span>
+          {% endif %}
+          <span class="bud-hint">
+            {% if goal.tracks_account %}{% blocktranslate with name=goal.account.name %}рахує «{{ name }}»{% endblocktranslate %}
+            {% elif goal.last_date %}{% blocktranslate with date=goal.last_date|date:"j E" %}останній внесок {{ date }}{% endblocktranslate %}
+            {% else %}{% translate "внесків ще немає" %}{% endif %}
+          </span>
+        </div>
+      </article>
+      {% endwith %}
+    {% endfor %}
+  </div>
+{% elif not archived %}
+  <c-empty icon="target" title="{% translate 'Цілей ще немає' %}">{% translate "Поставте ціль: відпустка, подушка безпеки чи нова техніка. CashFlix порахує, скільки відкладати щомісяця." %}</c-empty>
+{% else %}
+  <p class="panel-text">{% translate "В архіві порожньо." %}</p>
+{% endif %}
+
+{% if not archived and archived_count %}
+  <a class="acc-archived" href="{% url 'goals:goals' %}?archived=1">
+    <c-icon name="archive" />{% blocktranslate count counter=archived_count %}{{ counter }} ціль в архіві{% plural %}{{ counter }} цілей в архіві{% endblocktranslate %}<span>{% translate "Показати" %}</span>
+  </a>
+{% endif %}
+{% endwith %}

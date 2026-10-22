@@ -8,7 +8,7 @@ from django.db.models.functions import TruncMonth
 from django.utils import dateformat, timezone
 
 from apps.budgets.models import Limit
-from apps.goals.models import Goal
+from apps.goals.services import goal_items
 from apps.money.models import Transaction
 from apps.money.accounts import load_accounts
 from apps.recurring.dates import add_months
@@ -204,17 +204,7 @@ class Overview:
         return days
 
     def goals(self):
-        goals = Goal.objects.filter(household=self.household, is_archived=False).with_saved()
-        return [
-            {
-                "goal": goal,
-                "saved": goal.saved,
-                "left": max(ZERO, goal.target_amount - goal.saved),
-                "progress": goal.progress(goal.saved),
-                "monthly": goal.monthly_needed(goal.saved, self.today),
-            }
-            for goal in goals
-        ]
+        return goal_items(self.household, self.today)
 
     def chart_data(self, spending, half_year, categories):
         return {

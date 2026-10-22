@@ -12,7 +12,7 @@ def test_seed_demo_creates_household_and_can_be_reset():
     assert home.memberships.count() == 2
     assert home.transactions.exists()
     assert home.limits.count() == 5
-    assert home.goals.count() == 3
+    assert home.goals.count() == 4
 
     call_command("seed_demo", months=2, reset=True)
 

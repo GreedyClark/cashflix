@@ -7,7 +7,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from apps.households.models import Household, Membership
-from apps.money.models import CENT, MONEY
+from apps.money.models import CENT, MONEY, Account
 
 
 class GoalQuerySet(models.QuerySet):
@@ -20,7 +20,18 @@ class Goal(models.Model):
         Household, on_delete=models.CASCADE, related_name="goals", verbose_name=_("сім'я")
     )
     name = models.CharField(_("назва"), max_length=80)
-    icon = models.CharField(_("іконка"), max_length=40, default="target")
+    icon = models.CharField(_("іконка"), max_length=40, blank=True, default="target")
+    emoji = models.CharField(_("емодзі"), max_length=16, blank=True)
+    color_slot = models.PositiveSmallIntegerField(_("колір"), default=1)
+    account = models.ForeignKey(
+        Account,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="goals",
+        verbose_name=_("рахунок"),
+        help_text=_("Порожньо — внески записуються вручну"),
+    )
     target_amount = models.DecimalField(_("ціль"), **MONEY)
     deadline = models.DateField(_("до коли"), null=True, blank=True)
     is_archived = models.BooleanField(_("в архіві"), default=False)
@@ -39,6 +50,18 @@ class Goal(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def letter(self):
+        return self.name[:1].upper()
+
+    @property
+    def tracks_account(self):
+        return self.account_id is not None
+
+    @property
+    def currency(self):
+        return self.account.currency if self.account_id else self.household.base_currency
+
     def get_saved(self):
         return self.contributions.aggregate(total=Coalesce(Sum("amount"), Decimal("0")))["total"]
 
@@ -55,7 +78,7 @@ class Goal(models.Model):
         return (left / months).quantize(CENT, rounding=ROUND_HALF_UP)
 
     def progress(self, saved):
-        return min(100, int(saved * 100 / self.target_amount))
+        return max(0, min(100, int(saved * 100 / self.target_amount)))
 
 
 class GoalContribution(models.Model):

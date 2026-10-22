@@ -224,15 +224,16 @@
   <section class="panel">
     <header class="panel-head">
       <div><h2 class="panel-title">{% translate "Цілі" %}</h2></div>
+      <a class="panel-actions link-cf" href="{% url 'goals:goals' %}">{% translate "Усі цілі" %}</a>
     </header>
     <div class="panel-body">
       {% for item in goals %}
         <div class="goal-row">
           <div class="goal-ring" style="--progress: {{ item.progress }}"><span class="num">{{ item.progress }}%</span></div>
           <div class="goal-body">
-            <div class="goal-name"><c-icon :name="item.goal.icon" />{{ item.goal.name }}</div>
-            <div class="goal-meta num">{% blocktranslate with saved=item.saved|money:currency target=item.goal.target_amount|money:currency left=item.left|money:currency %}{{ saved }} з {{ target }} · лишилось {{ left }}{% endblocktranslate %}</div>
-            {% if item.monthly %}<div class="goal-plan">{% blocktranslate with amount=item.monthly|money:currency date=item.goal.deadline|date:"F Y"|lower %}Відкладайте {{ amount }} щомісяця, щоб встигнути до {{ date }}{% endblocktranslate %}</div>{% endif %}
+            <div class="goal-name"><c-cat-icon :category="item.goal" />{{ item.goal.name }}</div>
+            <div class="goal-meta num">{% blocktranslate with saved=item.saved|money:item.goal.currency target=item.goal.target_amount|money:item.goal.currency left=item.left|money:item.goal.currency %}{{ saved }} з {{ target }} · лишилось {{ left }}{% endblocktranslate %}</div>
+            {% if item.monthly %}<div class="goal-plan">{% blocktranslate with amount=item.monthly|money:item.goal.currency date=item.goal.deadline|date:"F Y"|lower %}Відкладайте {{ amount }} щомісяця, щоб встигнути до {{ date }}{% endblocktranslate %}</div>{% endif %}
           </div>
         </div>
       {% empty %}

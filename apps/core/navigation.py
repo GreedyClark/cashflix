@@ -8,5 +8,5 @@ MAIN_MENU = [
     {"label": _("Рахунки"), "short": _("Рахунки"), "icon": "wallet", "url_name": "money:accounts"},
     {"label": _("Категорії"), "short": _("Категорії"), "icon": "category", "url_name": "money:categories"},
     {"label": _("Регулярні платежі"), "short": _("Платежі"), "icon": "repeat", "url_name": "recurring:payments"},
-    {"label": _("Цілі"), "short": _("Цілі"), "icon": "target", "url_name": None},
+    {"label": _("Цілі"), "short": _("Цілі"), "icon": "target", "url_name": "goals:goals"},
 ]
