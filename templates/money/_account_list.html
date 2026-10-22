@@ -1,0 +1,60 @@
+{% load i18n money %}
+{% with currency=request.household.base_currency %}
+{% if not archived %}
+  <div class="acc-summary">
+    <section class="panel acc-total">
+      <p class="eyebrow">{% translate "Усього на рахунках" %}</p>
+      <div class="split-total num">{{ total|money:currency }}</div>
+      {% if shares %}
+        <div class="split-bar">{% for share in shares %}<i class="color-{{ share.account.tone }}" style="flex-grow: {{ share.percent }}"></i>{% endfor %}</div>
+        <ul class="split-legend">
+          {% for share in shares %}
+            <li><span class="dot color-{{ share.account.tone }}"></span><span class="split-name">{{ share.account.name }}</span><span class="num">{{ share.percent }}%</span></li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </section>
+
+    <section class="panel acc-rates">
+      <div class="rates-head">
+        <p class="eyebrow">{% translate "Курс НБУ" %}</p>
+        {% if rates %}<span class="rates-time">{% blocktranslate with date=rates.0.date|day_label|lower %}на {{ date }}{% endblocktranslate %}</span>{% endif %}
+      </div>
+      {% for row in rates %}
+        <div class="rate-row">
+          <span class="rate-cur">{% if row.currency == "USD" %}${% else %}€{% endif %}</span>
+          <span>{% if row.currency == "USD" %}{% translate "Долар" %}{% else %}{% translate "Євро" %}{% endif %}</span>
+          <b class="num">{{ row.rate|floatformat:2 }} ₴</b>
+          {% if row.change %}<span class="delta {% if row.change > 0 %}bad{% else %}good{% endif %}">{% if row.change > 0 %}↑{% else %}↓{% endif %} {{ row.change|absolute|floatformat:2 }}</span>{% else %}<span></span>{% endif %}
+        </div>
+      {% empty %}
+        <p class="panel-text">{% translate "Курсів ще немає. Вони підтягнуться самі з першою операцією у валюті або командою update_rates." %}</p>
+      {% endfor %}
+      <p class="rates-note">{% translate "Операції у валюті рахуються за курсом на свою дату, тож старі підсумки не змінюються." %}</p>
+    </section>
+  </div>
+{% else %}
+  <div class="archive-head">
+    <a class="btn-cf" href="{% url 'money:accounts' %}"><c-icon name="chevron-left" />{% translate "Усі рахунки" %}</a>
+    <p class="panel-text">{% translate "Архівні рахунки не показуються у формах, але їхні операції лишаються в історії." %}</p>
+  </div>
+{% endif %}
+
+{% if accounts %}
+  <div class="acc-grid">
+    {% for account in accounts %}<c-account-card :account="account" />{% endfor %}
+  </div>
+{% elif not archived %}
+  <section class="panel">
+    <c-empty icon="wallet" title="{% translate 'Рахунків ще немає' %}">{% translate "Додайте картку, готівку чи інвестицію, щоб вести облік." %}</c-empty>
+  </section>
+{% endif %}
+
+{% if not archived and archived_count %}
+  <a class="acc-archived" href="?archived=1">
+    <c-icon name="archive" />
+    {% blocktranslate count counter=archived_count %}{{ counter }} рахунок в архіві{% plural %}{{ counter }} рахунки в архіві{% endblocktranslate %}
+    <span>{% translate "Показати" %}</span>
+  </a>
+{% endif %}
+{% endwith %}

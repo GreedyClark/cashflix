@@ -211,7 +211,7 @@
         {% for account in accounts %}
           <div class="account-card">
             <span class="account-name"><c-icon :name="account.icon" />{{ account.name }}</span>
-            <span class="account-balance num">{{ account.balance|money:account.currency }}</span>
+            <span class="account-balance num">{{ account.value|money:account.currency }}</span>
             <span class="account-sub">{% if account.currency != currency and account.converted is not None %}≈ {{ account.converted|money:currency }}{% elif account.owner %}{{ account.owner.user.name }}{% else %}{% translate "Спільний" %}{% endif %}</span>
           </div>
         {% empty %}

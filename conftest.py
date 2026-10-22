@@ -82,3 +82,12 @@ def auth_client(client, user, user_household):
 def newcomer_client(client, user):
     client.force_login(user)
     return client
+
+@pytest.fixture(autouse=True)
+def offline_nbu(monkeypatch):
+    from apps.money import nbu
+
+    def unavailable(on_date):
+        raise nbu.NbuUnavailable("offline in tests")
+
+    monkeypatch.setattr(nbu, "fetch", unavailable)

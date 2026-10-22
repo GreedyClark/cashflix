@@ -10,11 +10,10 @@ from django.utils import dateformat, timezone
 from apps.budgets.models import Limit
 from apps.goals.models import Goal
 from apps.money.models import Transaction
-from apps.money.rates import RateNotFound, convert_rate
+from apps.money.accounts import load_accounts
 from apps.recurring.dates import add_months
 
 ZERO = Decimal("0")
-CENT = Decimal("0.01")
 
 
 def percent_change(now, before):
@@ -83,14 +82,7 @@ class Overview:
 
     @cached_property
     def accounts(self):
-        accounts = list(self.household.accounts.filter(is_archived=False).with_balance().select_related("owner__user"))
-        for account in accounts:
-            try:
-                rate = convert_rate(account.currency, self.household.base_currency, self.today)
-                account.converted = (account.balance * rate).quantize(CENT)
-            except RateNotFound:
-                account.converted = None
-        return accounts
+        return load_accounts(self.household, self.today)
 
     @cached_property
     def total_balance(self):

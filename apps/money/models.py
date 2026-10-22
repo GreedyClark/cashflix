@@ -93,6 +93,14 @@ class Account(models.Model):
         SAVINGS = "savings", _("накопичувальний")
         INVESTMENT = "investment", _("інвестиційний")
 
+    class InvestmentType(models.TextChoices):
+        FUND = "fund", _("фонд нерухомості")
+        BONDS = "bonds", _("ОВДП")
+        DEPOSIT = "deposit", _("депозит")
+        STOCKS = "stocks", _("акції")
+        CRYPTO = "crypto", _("криптовалюта")
+        OTHER = "other", _("інше")
+
     ICONS = {"card": "credit-card", "cash": "cash", "savings": "pig-money", "investment": "chart-line"}
 
     household = models.ForeignKey(
@@ -100,6 +108,9 @@ class Account(models.Model):
     )
     name = models.CharField(_("назва"), max_length=50)
     kind = models.CharField(_("тип"), max_length=12, choices=Kind.choices, default=Kind.CARD)
+    investment_type = models.CharField(
+        _("тип інвестиції"), max_length=10, choices=InvestmentType.choices, blank=True
+    )
     currency = models.CharField(_("валюта"), max_length=3, choices=Currency.choices, default=Currency.UAH)
     owner = models.ForeignKey(
         Membership,
@@ -132,8 +143,33 @@ class Account(models.Model):
     def icon(self):
         return self.ICONS[self.kind]
 
+    @property
+    def is_investment(self):
+        return self.kind == self.Kind.INVESTMENT
+
     def get_balance(self):
         return Account.objects.with_balance().get(pk=self.pk).balance
+
+
+class AccountValuation(models.Model):
+    account = models.ForeignKey(
+        Account, on_delete=models.CASCADE, related_name="valuations", verbose_name=_("рахунок")
+    )
+    date = models.DateField(_("дата"), default=timezone.localdate)
+    value = models.DecimalField(_("вартість"), **MONEY)
+    created_at = models.DateTimeField(_("створено"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("оцінка вартості")
+        verbose_name_plural = _("оцінки вартості")
+        ordering = ["-date"]
+        constraints = [
+            models.UniqueConstraint(fields=["account", "date"], name="unique_valuation_per_day"),
+            models.CheckConstraint(condition=Q(value__gte=0), name="valuation_value_not_negative"),
+        ]
+
+    def __str__(self):
+        return f"{self.account}: {self.value} ({self.date})"
 
 
 class TransactionQuerySet(models.QuerySet):

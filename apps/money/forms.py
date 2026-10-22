@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .models import Account, Category, Transaction
+from .models import Account, AccountValuation, Category, Transaction
 
 
 def month_start(value):
@@ -18,6 +18,22 @@ def month_start(value):
 
 def next_month(month):
     return (month + datetime.timedelta(days=32)).replace(day=1)
+
+
+class AmountField(forms.DecimalField):
+    def __init__(self, **kwargs):
+        kwargs.setdefault("max_digits", 14)
+        kwargs.setdefault("decimal_places", 2)
+        kwargs.setdefault("localize", True)
+        kwargs.setdefault(
+            "widget", forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off", "placeholder": "0"})
+        )
+        super().__init__(**kwargs)
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.replace(" ", "").replace("\u00a0", "").replace("\u202f", "")
+        return super().to_python(value)
 
 
 class TransactionFilterForm(forms.Form):
@@ -147,20 +163,17 @@ class TransactionForm(forms.ModelForm):
     WHEN_CHOICES = [("today", _("Сьогодні")), ("yesterday", _("Вчора")), ("other", _("Інша дата"))]
 
     when = forms.ChoiceField(choices=WHEN_CHOICES, widget=forms.RadioSelect, required=False)
-    amount = forms.DecimalField(
+    amount = AmountField(
         label=_("Сума"),
-        localize=True,
-        max_digits=14,
-        decimal_places=2,
         min_value=Decimal("0.01"),
         error_messages={"min_value": _("Вкажіть суму більше нуля.")},
-        widget=forms.TextInput(attrs={"inputmode": "decimal", "autocomplete": "off", "placeholder": "0"}),
     )
+    to_amount = AmountField(label=_("Зараховано"), required=False, min_value=Decimal("0.01"))
     member = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
 
     class Meta:
         model = Transaction
-        fields = ["type", "amount", "title", "category", "account", "to_account", "member", "date", "note"]
+        fields = ["type", "amount", "title", "category", "account", "to_account", "to_amount", "member", "date", "note"]
         widgets = {
             "type": forms.RadioSelect,
             "title": forms.TextInput(attrs={"placeholder": _("Наприклад, Сільпо"), "autocomplete": "off"}),
@@ -185,6 +198,10 @@ class TransactionForm(forms.ModelForm):
         if self.instance.pk:
             self.initial["amount"] = format_amount(self.instance.amount)
             self.initial["when"] = when_for(self.instance.date)
+            if self.instance.to_amount and self.instance.to_amount != self.instance.amount:
+                self.initial["to_amount"] = format_amount(self.instance.to_amount)
+            else:
+                self.initial["to_amount"] = ""
         else:
             self.initial.setdefault("member", membership)
             self.initial.setdefault("account", default_account(household, membership))
@@ -210,13 +227,13 @@ class TransactionForm(forms.ModelForm):
             self.instance.category = None
         else:
             cleaned["to_account"] = None
+            cleaned["to_amount"] = None
             self.instance.to_account = None
         return cleaned
 
     def save(self, commit=True):
         if self.instance.pk and {"date", "account"} & set(self.changed_data):
             self.instance.rate = None
-            self.instance.to_amount = None
         return super().save(commit)
 
     def category_options(self):
@@ -256,3 +273,69 @@ def default_account(household, membership):
     accounts = household.accounts.filter(is_archived=False)
     cards = accounts.filter(kind=Account.Kind.CARD)
     return cards.filter(owner=membership).first() or cards.first() or accounts.first()
+
+
+class AccountForm(forms.ModelForm):
+    opening_balance = AmountField(label=_("Початковий залишок"), required=False)
+    owner = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
+
+    class Meta:
+        model = Account
+        fields = ["name", "kind", "investment_type", "currency", "owner", "opening_balance"]
+        widgets = {
+            "name": forms.TextInput(attrs={"placeholder": _("Наприклад, Монобанк"), "autocomplete": "off"}),
+            "kind": forms.RadioSelect,
+            "investment_type": forms.RadioSelect,
+            "currency": forms.RadioSelect,
+        }
+        error_messages = {"name": {"required": _("Вкажіть назву рахунку.")}}
+
+    def __init__(self, *args, household, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.household = household
+        self.fields["owner"].queryset = household.memberships.active().select_related("user")
+        self.fields["investment_type"].choices = Account.InvestmentType.choices
+        if self.instance.pk:
+            self.initial["opening_balance"] = format_amount(self.instance.opening_balance)
+            if self.instance.transactions.exists() or self.instance.incoming_transfers.exists():
+                self.fields["currency"].disabled = True
+
+    def clean_opening_balance(self):
+        return self.cleaned_data["opening_balance"] or Decimal("0")
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("kind") != Account.Kind.INVESTMENT:
+            cleaned["investment_type"] = ""
+        elif not cleaned.get("investment_type"):
+            cleaned["investment_type"] = Account.InvestmentType.OTHER
+        return cleaned
+
+    def owner_options(self):
+        selected = str(self["owner"].value() or "")
+        return [{"object": m, "checked": str(m.pk) == selected} for m in self.fields["owner"].queryset]
+
+
+class ValuationForm(forms.ModelForm):
+    value = AmountField(label=_("Поточна вартість"), min_value=Decimal("0"))
+
+    class Meta:
+        model = AccountValuation
+        fields = ["value", "date"]
+        widgets = {"date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
+
+    def __init__(self, *args, account, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.instance.account = account
+        self.initial.setdefault("date", timezone.localdate())
+
+    def save(self, commit=True):
+        valuation, created = AccountValuation.objects.update_or_create(
+            account=self.instance.account,
+            date=self.cleaned_data["date"],
+            defaults={"value": self.cleaned_data["value"]},
+        )
+        return valuation
+
+    def validate_unique(self):
+        pass

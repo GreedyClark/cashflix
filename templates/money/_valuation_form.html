@@ -1,0 +1,28 @@
+{% load i18n money %}
+<form class="tx-form" novalidate hx-post="{% url 'money:valuation_create' account.pk %}" hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% blocktranslate with name=account.name %}Вартість «{{ name }}»{% endblocktranslate %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    <p class="panel-text">{% translate "Подивіться поточну вартість у застосунку, де інвестуєте, і внесіть її сюди. Дохід CashFlix порахує сам." %}</p>
+    <div class="field-cf{% if form.value.errors %} has-error{% endif %}">
+      <label class="amount-field">
+        <input class="amount-input num" type="text" name="value" value="{{ form.value.value|default_if_none:'' }}"
+               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Поточна вартість' %}" autofocus>
+        <span class="amount-cur static">{% if account.currency == "USD" %}${% elif account.currency == "EUR" %}€{% else %}₴{% endif %}</span>
+      </label>
+      {% for error in form.value.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+    <div class="field-cf">
+      <label class="f-label" for="{{ form.date.id_for_label }}">{% translate "На дату" %}</label>
+      {{ form.date }}
+    </div>
+  </div>
+
+  <div class="sheet-foot">
+    <button class="btn-cf primary wide" type="submit">{% translate "Зберегти" %}</button>
+  </div>
+</form>

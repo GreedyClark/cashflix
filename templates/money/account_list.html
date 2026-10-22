@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Рахунки" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "Рахунки" %}</h1>
+    </div>
+    <div class="page-actions">
+      <button class="btn-cf" type="button" hx-get="{% url 'money:transaction_create' %}?type=transfer" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Переказ" %}</button>
+      <button class="btn-cf primary" type="button" hx-get="{% url 'money:account_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Рахунок" %}</button>
+    </div>
+  </div>
+
+  <div id="accounts"
+       hx-get="{% url 'money:accounts' %}{% if archived %}?archived=1{% endif %}"
+       hx-trigger="accountsChanged from:body" hx-disinherit="*">
+    {% include "money/_account_list.html" %}
+  </div>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Рахунок' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
+{% endblock %}

@@ -11,7 +11,7 @@ from apps.budgets.models import Limit
 from apps.goals.models import Goal, GoalContribution
 from apps.households.models import Household
 from apps.households.services import add_member, create_household
-from apps.money.models import Account, ExchangeRate, Transaction
+from apps.money.models import Account, AccountValuation, ExchangeRate, Transaction
 from apps.recurring.dates import add_months
 from apps.recurring.models import RecurringPayment
 from apps.recurring.services import run_due_payments
@@ -69,6 +69,7 @@ class Command(BaseCommand):
         self.create_limits()
         self.create_recurring()
         self.create_goals()
+        self.create_valuations()
 
         self.stdout.write(self.style.SUCCESS(f"Demo household created with {count} transactions."))
         for email, _ in USERS:
@@ -107,8 +108,13 @@ class Command(BaseCommand):
         self.usd = Account.objects.create(
             name="Доларовий", kind=Account.Kind.SAVINGS, currency="USD", opening_balance=Decimal("300"), **common
         )
-        self.inzhur = Account.objects.create(
-            name="Inzhur", kind=Account.Kind.INVESTMENT, owner=self.yura, opening_balance=Decimal("20000"), **common
+        self.fund = Account.objects.create(
+            name="Фонд нерухомості",
+            kind=Account.Kind.INVESTMENT,
+            investment_type=Account.InvestmentType.FUND,
+            owner=self.yura,
+            opening_balance=Decimal("20000"),
+            **common,
         )
 
     def add(self, **fields):
@@ -172,15 +178,27 @@ class Command(BaseCommand):
                 self.add(
                     type=Transaction.Type.TRANSFER,
                     date=day,
-                    title="Поповнення Inzhur",
+                    title="Поповнення інвестицій",
                     account=self.mono,
-                    to_account=self.inzhur,
+                    to_account=self.fund,
                     member=self.yura,
                     amount=Decimal("3000"),
                 )
                 count += 1
             day += datetime.timedelta(days=1)
         return count
+
+    def create_valuations(self):
+        invested = self.fund.opening_balance
+        month = self.start
+        while month <= self.today:
+            invested += Decimal("3000")
+            growth = Decimal("1.004") ** ((month.year - self.start.year) * 12 + month.month - self.start.month + 1)
+            AccountValuation.objects.create(
+                account=self.fund, date=month.replace(day=28) if month.month != self.today.month else self.today,
+                value=(invested * growth).quantize(Decimal("1")),
+            )
+            month = add_months(month, 1)
 
     def create_limits(self):
         rows = [

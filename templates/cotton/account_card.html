@@ -1,0 +1,51 @@
+{% load i18n money %}
+<c-vars account />
+<article class="acc-card">
+  <a class="acc-link" href="{% url 'money:transactions' %}?account={{ account.pk }}" aria-label="{% blocktranslate with name=account.name %}Операції рахунку {{ name }}{% endblocktranslate %}"></a>
+  <div class="acc-top">
+    <span class="tx-icon tone-{{ account.tone }}"><c-icon :name="account.icon" /></span>
+    <span class="acc-title">
+      <span class="acc-name">{{ account.name }}</span>
+      <span class="acc-kind">{% if account.is_investment %}{{ account.get_investment_type_display }}{% else %}{{ account.get_kind_display }}{% endif %}</span>
+    </span>
+    {% if account.owner %}
+      <span class="avatar-cf mini color-{{ account.owner.color_slot }}" title="{{ account.owner.user.name }}">{{ account.owner.user.initial }}</span>
+    {% else %}
+      <span class="acc-shared"><c-icon name="users" />{% translate "спільний" %}</span>
+    {% endif %}
+    <details class="menu-cf acc-menu">
+      <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
+      <div class="menu-pop">
+        <button class="menu-item" type="button" hx-get="{% url 'money:account_edit' account.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
+        {% if account.is_investment %}
+          <button class="menu-item" type="button" hx-get="{% url 'money:valuation_create' account.pk %}" hx-target="#tx-dialog-body"><c-icon name="chart-line" />{% translate "Оновити вартість" %}</button>
+        {% endif %}
+        {% if not account.is_archived %}
+          <button class="menu-item" type="button" hx-get="{% url 'money:transaction_create' %}?type=transfer&account={{ account.pk }}" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Переказ звідси" %}</button>
+        {% endif %}
+        <button class="menu-item" type="button" hx-post="{% url 'money:account_archive' account.pk %}" hx-swap="none"><c-icon name="archive" />{% if account.is_archived %}{% translate "Повернути з архіву" %}{% else %}{% translate "В архів" %}{% endif %}</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="acc-balance num">{{ account.value|money:account.currency }}</div>
+  <div class="acc-sub">
+    {% if account.investment %}
+      {% blocktranslate with amount=account.investment.invested|money:account.currency %}вкладено {{ amount }}{% endblocktranslate %}
+      {% if account.investment.invested %}· <span class="{% if account.investment.profit >= 0 %}good{% else %}bad{% endif %}">{% if account.investment.profit >= 0 %}+{% endif %}{{ account.investment.profit|money:account.currency }} ({{ account.investment.percent }}%)</span>{% endif %}
+    {% elif account.currency != request.household.base_currency and account.converted is not None %}
+      ≈ {{ account.converted|money:request.household.base_currency }} · {% translate "курс" %} {{ account.rate|floatformat:2 }}
+    {% else %}&nbsp;{% endif %}
+  </div>
+
+  <div class="acc-flow num">
+    {% if account.investment %}
+      <span>{% blocktranslate with amount=account.investment.payouts|money:account.currency %}виплати {{ amount }}{% endblocktranslate %}</span>
+      <span class="acc-flow-label">{% if account.investment.valued_on %}{% blocktranslate with date=account.investment.valued_on|date:"j E" %}оцінка {{ date }}{% endblocktranslate %}{% else %}{% translate "вартість не оновлювали" %}{% endif %}</span>
+    {% else %}
+      <span class="plus">+{{ account.received|money:account.currency }}</span>
+      <span>−{{ account.spent|money:account.currency }}</span>
+      <span class="acc-flow-label">{% translate "цього місяця" %}</span>
+    {% endif %}
+  </div>
+</article>

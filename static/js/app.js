@@ -37,7 +37,7 @@ document.body.addEventListener("closeModal", function () {
 
 function closeMenus(clicked) {
   document.querySelectorAll("details.menu-cf[open]").forEach(function (menu) {
-    if (clicked === menu || !menu.contains(clicked)) {
+    if (clicked === menu || !menu.contains(clicked) || clicked.closest(".menu-item")) {
       menu.open = false;
     }
   });

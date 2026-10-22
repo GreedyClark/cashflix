@@ -68,6 +68,13 @@
       {% for error in form.to_account.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </fieldset>
 
+    <div class="field-cf" data-show="transfer">
+      <label class="f-label" for="{{ form.to_amount.id_for_label }}">{% translate "Зараховано, якщо валюта рахунків різна" %}</label>
+      {{ form.to_amount }}
+      <p class="field-help">{% translate "Порожньо — порахуємо за курсом НБУ." %}</p>
+      {% for error in form.to_amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
     <fieldset class="field-cf">
       <legend class="f-label">{% translate "Дата" %}</legend>
       <div class="pill-row">

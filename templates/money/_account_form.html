@@ -1,0 +1,75 @@
+{% load i18n %}
+<form class="tx-form account-form" novalidate
+      hx-post="{% if account %}{% url 'money:account_edit' account.pk %}{% else %}{% url 'money:account_create' %}{% endif %}"
+      hx-target="#tx-dialog-body">
+  {% csrf_token %}
+  <div class="sheet-head">
+    <h2>{% if account %}{% translate "Рахунок" %}{% else %}{% translate "Новий рахунок" %}{% endif %}</h2>
+    <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
+  </div>
+
+  <div class="sheet-body">
+    <div class="field-cf{% if form.name.errors %} has-error{% endif %}">
+      <label class="f-label" for="{{ form.name.id_for_label }}">{% translate "Назва" %}</label>
+      {{ form.name }}
+      {% for error in form.name.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Тип" %}</legend>
+      <div class="pill-row">
+        {% for radio in form.kind %}<label class="pill-cf">{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="field-cf investment-only">
+      <legend class="f-label">{% translate "Куди інвестуєте" %}</legend>
+      <div class="pill-row">
+        {% for radio in form.investment_type %}<label class="pill-cf">{{ radio.tag }}{{ radio.choice_label|capfirst }}</label>{% endfor %}
+      </div>
+    </fieldset>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Валюта" %}</legend>
+      <div class="pill-row">
+        {% for radio in form.currency %}<label class="pill-cf{% if form.currency.field.disabled %} is-disabled{% endif %}">{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}
+      </div>
+      {% if form.currency.field.disabled %}<p class="field-help">{% translate "Валюту не можна змінити, бо по рахунку вже є операції." %}</p>{% endif %}
+    </fieldset>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Чий рахунок" %}</legend>
+      <div class="pill-row">
+        {% for option in form.owner_options %}
+          <label class="pill-cf person">
+            <input type="radio" name="owner" value="{{ option.object.pk }}"{% if option.checked %} checked{% endif %}>
+            <span class="avatar-cf mini color-{{ option.object.color_slot }}">{{ option.object.user.initial }}</span>{{ option.object.user.name }}
+          </label>
+        {% endfor %}
+        <label class="pill-cf person">
+          <input type="radio" name="owner" value=""{% if not form.owner.value %} checked{% endif %}>
+          <span class="avatar-cf mini color-shared">С</span>{% translate "Спільний" %}
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="field-cf{% if form.opening_balance.errors %} has-error{% endif %}">
+      <label class="f-label" for="{{ form.opening_balance.id_for_label }}">
+        <span class="investment-hide">{% translate "Залишок на початку обліку" %}</span>
+        <span class="investment-only">{% translate "Вже вкладено до початку обліку" %}</span>
+      </label>
+      {{ form.opening_balance }}
+      {% for error in form.opening_balance.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+  </div>
+
+  <div class="sheet-foot">
+    {% if account %}
+      <span class="sheet-foot-space"></span>
+      <button class="btn-cf" type="button" data-dialog-close>{% translate "Скасувати" %}</button>
+      <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+    {% else %}
+      <button class="btn-cf primary wide" type="submit">{% translate "Додати рахунок" %}</button>
+    {% endif %}
+  </div>
+</form>

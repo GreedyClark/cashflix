@@ -2702,6 +2702,10 @@ a.bar-col:hover i {
   content: "₴";
 }
 
+.amount-cur.static::before {
+  content: none;
+}
+
 .tx-form:has([name="account"][data-currency="USD"]:checked) .amount-cur::before {
   content: "$";
 }
@@ -2798,7 +2802,7 @@ a.bar-col:hover i {
     height: 26px;
   }
 
-  .page-actions .btn-cf.primary {
+  .page:has(.fab) .page-actions .btn-cf.primary {
     display: none;
   }
 }
@@ -3430,5 +3434,224 @@ a.bar-col:hover i {
 
   .page-actions .people-seg {
     order: -1;
+  }
+}
+
+/* Accounts */
+
+.acc-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.acc-total,
+.acc-rates {
+  padding: 20px;
+}
+
+.rates-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.rates-time {
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
+
+.rate-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.rate-row b {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.rate-cur {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.rates-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-subtle);
+}
+
+.acc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.acc-card {
+  position: relative;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--surface-1);
+  transition: border-color 0.15s;
+}
+
+.acc-card:hover {
+  border-color: var(--hairline-strong);
+}
+
+.acc-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 12px;
+}
+
+.acc-menu {
+  position: relative;
+  z-index: 2;
+}
+
+.acc-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.acc-title {
+  flex: 1;
+  display: grid;
+  min-width: 0;
+}
+
+.acc-name {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acc-kind {
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
+
+.acc-top .avatar-cf.mini {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  font-size: 10px;
+}
+
+.acc-shared {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+}
+
+.acc-shared .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.acc-balance {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.acc-sub {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--ink-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acc-flow {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.acc-flow-label {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--ink-tertiary);
+}
+
+.acc-archived {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: 12px;
+  color: var(--ink-subtle);
+  font-size: 13px;
+}
+
+.acc-archived span {
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.acc-archived .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.archive-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 16px;
+}
+
+.archive-head .panel-text {
+  margin: 0;
+}
+
+.account-form:not(:has([name="kind"][value="investment"]:checked)) .investment-only,
+.account-form:has([name="kind"][value="investment"]:checked) .investment-hide {
+  display: none;
+}
+
+.pill-cf.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .acc-summary {
+    grid-template-columns: 1fr;
   }
 }

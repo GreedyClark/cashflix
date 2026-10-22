@@ -1,0 +1,134 @@
+import datetime
+from decimal import Decimal
+
+import pytest
+from django.core.management import call_command
+from django.urls import reverse
+
+from apps.households.services import create_household
+from apps.money import nbu
+from apps.money.accounts import investment_for, load_accounts
+from apps.money.models import Account, AccountValuation, ExchangeRate, Transaction
+from apps.money.rates import uah_rate
+
+DAY = datetime.date(2026, 10, 15)
+
+
+@pytest.fixture
+def yura_client(client, yura):
+    client.force_login(yura.user)
+    return client
+
+
+@pytest.fixture
+def fund(home, yura):
+    return Account.objects.create(
+        household=home, name="Фонд нерухомості", kind="investment", investment_type="fund", owner=yura,
+        opening_balance=Decimal("20000"),
+    )
+
+
+def test_investment_profit_and_payouts(home, mono, fund, salary):
+    Transaction.objects.create(household=home, type="transfer", account=mono, to_account=fund, amount=Decimal("3000"), title="Поповнення", date=DAY)
+    Transaction.objects.create(household=home, type="income", account=fund, category=salary, amount=Decimal("500"), title="Виплата", date=DAY)
+    AccountValuation.objects.create(account=fund, date=DAY, value=Decimal("24000"))
+
+    investment = investment_for(Account.objects.with_balance().get(pk=fund.pk))
+
+    assert investment.invested == Decimal("23000")
+    assert investment.value == Decimal("24000")
+    assert investment.profit == Decimal("1000")
+    assert investment.percent == Decimal("4.3")
+    assert investment.payouts == Decimal("500")
+
+
+def test_investment_counts_at_value_in_totals(home, fund):
+    AccountValuation.objects.create(account=fund, date=DAY, value=Decimal("25000"))
+
+    account = load_accounts(home, DAY)[0]
+
+    assert account.converted == Decimal("25000")
+
+
+def test_page_shows_only_own_accounts(yura_client, mono, user):
+    stranger = create_household(user, "Чужий дім")
+    foreign = Account.objects.create(household=stranger, name="Чужа картка")
+
+    response = yura_client.get(reverse("money:accounts"))
+
+    assert response.status_code == 200
+    assert [a.name for a in response.context["accounts"]] == ["Монобанк"]
+    assert yura_client.get(reverse("money:account_edit", args=[foreign.pk])).status_code == 404
+
+
+def test_create_account_with_comma_balance(yura_client, home, yura):
+    response = yura_client.post(reverse("money:account_create"), {
+        "name": "ПриватБанк", "kind": "card", "currency": "UAH", "owner": yura.pk, "opening_balance": "1 250,50",
+    })
+
+    assert response["HX-Reswap"] == "none"
+    account = home.accounts.get(name="ПриватБанк")
+    assert account.opening_balance == Decimal("1250.50")
+    assert account.investment_type == ""
+
+
+def test_investment_without_type_gets_other(yura_client, home):
+    yura_client.post(reverse("money:account_create"), {"name": "ОВДП", "kind": "investment", "currency": "UAH", "owner": ""})
+
+    assert home.accounts.get(name="ОВДП").investment_type == "other"
+
+
+def test_archive_and_restore(yura_client, mono):
+    yura_client.post(reverse("money:account_archive", args=[mono.pk]))
+    mono.refresh_from_db()
+    assert mono.is_archived
+
+    yura_client.post(reverse("money:account_archive", args=[mono.pk]))
+    mono.refresh_from_db()
+    assert not mono.is_archived
+
+
+def test_valuation_for_same_day_is_replaced(yura_client, fund):
+    url = reverse("money:valuation_create", args=[fund.pk])
+    yura_client.post(url, {"value": "21000", "date": "2026-10-15"})
+    yura_client.post(url, {"value": "21 500", "date": "2026-10-15"})
+
+    assert list(fund.valuations.values_list("value", flat=True)) == [Decimal("21500")]
+
+
+def test_valuation_only_for_investments(yura_client, mono):
+    assert yura_client.get(reverse("money:valuation_create", args=[mono.pk])).status_code == 404
+
+
+def test_update_rates_command(db, monkeypatch):
+    monkeypatch.setattr(nbu, "fetch", lambda on_date: {"USD": Decimal("41.5"), "EUR": Decimal("45.1")})
+
+    call_command("update_rates", days=2)
+
+    assert ExchangeRate.objects.count() == 4
+
+
+def test_missing_rate_is_downloaded(db, monkeypatch):
+    monkeypatch.setattr(nbu, "fetch", lambda on_date: {"USD": Decimal("41.5")})
+
+    assert uah_rate("USD", DAY) == Decimal("41.5")
+    assert ExchangeRate.objects.filter(currency="USD", date=DAY).exists()
+
+
+def test_transfer_between_currencies_with_received_amount(yura_client, home, mono, usd_account, usd_rate):
+    yura_client.post(reverse("money:transaction_create"), {
+        "type": "transfer", "amount": "4200", "title": "Купівля доларів", "when": "other", "date": "2026-10-15",
+        "account": mono.pk, "to_account": usd_account.pk, "to_amount": "100", "member": "",
+    })
+
+    tx = home.transactions.get()
+    assert tx.to_amount == Decimal("100")
+    assert Account.objects.with_balance().get(pk=usd_account.pk).balance == Decimal("100")
+
+
+def test_transfer_form_prefilled_from_link(yura_client, mono):
+    response = yura_client.get(reverse("money:transaction_create"), {"type": "transfer", "account": mono.pk})
+    form = response.context["form"]
+
+    assert form["type"].value() == "transfer"
+    assert str(form["account"].value()) == str(mono.pk)

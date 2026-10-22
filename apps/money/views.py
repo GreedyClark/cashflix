@@ -1,5 +1,6 @@
 import calendar
 from datetime import timedelta
+from decimal import Decimal
 
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, render
@@ -10,11 +11,12 @@ from django.views.decorators.http import require_POST
 
 from apps.core.htmx import toast_response
 
-from .forms import TransactionFilterForm, TransactionForm, next_month
+from .accounts import load_accounts, month_flow, rate_changes
+from .forms import AccountForm, TransactionFilterForm, TransactionForm, ValuationForm, next_month
+from .models import Account
 from .services import restore, snapshot
 
 UNDO_KEY = "undo_transaction"
-CHANGED = ("transactionsChanged", "closeModal")
 
 
 def daily_bars(month, spent_by_day, selected):
@@ -86,10 +88,14 @@ def transaction_list(request):
     return render(request, template, context)
 
 
-def transaction_form(request, transaction=None):
+CHANGED = ("transactionsChanged", "accountsChanged", "closeModal")
+
+
+def transaction_form(request, transaction=None, initial=None):
     form = TransactionForm(
         request.POST or None,
         instance=transaction,
+        initial=initial,
         household=request.household,
         membership=request.membership,
     )
@@ -103,7 +109,8 @@ def transaction_form(request, transaction=None):
 
 
 def transaction_create(request):
-    return transaction_form(request)
+    initial = {name: request.GET[name] for name in ("type", "account") if request.GET.get(name)}
+    return transaction_form(request, initial=initial)
 
 
 def transaction_edit(request, pk):
@@ -127,3 +134,77 @@ def transaction_undo(request):
     if data:
         restore(request.household, data)
     return toast_response(request, _("Операцію повернуто"), events=CHANGED)
+
+
+def account_list(request):
+    household = request.household
+    today = timezone.localdate()
+    archived = request.GET.get("archived") == "1"
+    accounts = load_accounts(household, today, archived=archived)
+
+    month_start = today.replace(day=1)
+    for index, account in enumerate(accounts):
+        account.tone = tone_for(index)
+        account.received, account.spent = month_flow(account, month_start, today)
+
+    active = accounts if not archived else []
+    total = sum((a.converted for a in active if a.converted is not None), Decimal("0"))
+    shares = [
+        {"account": a, "percent": round(a.converted / total * 100) if total else 0}
+        for a in active
+        if a.converted and a.converted > 0
+    ]
+    context = {
+        "accounts": accounts,
+        "archived": archived,
+        "archived_count": household.accounts.filter(is_archived=True).count(),
+        "total": total,
+        "shares": shares,
+        "rates": rate_changes(today),
+        "today": today,
+    }
+    template = "money/_account_list.html" if request.headers.get("HX-Request") else "money/account_list.html"
+    return render(request, template, context)
+
+
+def tone_for(index):
+    return ACCOUNT_TONES[index % len(ACCOUNT_TONES)]
+
+
+ACCOUNT_TONES = [1, 2, 3, 5, 7, 4, 6]
+ACCOUNTS_CHANGED = ("accountsChanged", "closeModal")
+
+
+def account_form(request, account=None):
+    form = AccountForm(request.POST or None, instance=account, household=request.household)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        message = _("Рахунок додано") if account is None else _("Зміни збережено")
+        return toast_response(request, message, events=ACCOUNTS_CHANGED)
+    return render(request, "money/_account_form.html", {"form": form, "account": account})
+
+
+def account_create(request):
+    return account_form(request)
+
+
+def account_edit(request, pk):
+    return account_form(request, get_object_or_404(request.household.accounts, pk=pk))
+
+
+@require_POST
+def account_archive(request, pk):
+    account = get_object_or_404(request.household.accounts, pk=pk)
+    account.is_archived = not account.is_archived
+    account.save(update_fields=["is_archived"])
+    message = _("Рахунок перенесено в архів") if account.is_archived else _("Рахунок повернуто з архіву")
+    return toast_response(request, message, events=ACCOUNTS_CHANGED)
+
+
+def valuation_create(request, pk):
+    account = get_object_or_404(request.household.accounts, pk=pk, kind=Account.Kind.INVESTMENT)
+    form = ValuationForm(request.POST or None, account=account)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return toast_response(request, _("Вартість оновлено"), events=ACCOUNTS_CHANGED)
+    return render(request, "money/_valuation_form.html", {"form": form, "account": account})
