@@ -79,6 +79,14 @@
           <button class="google-btn" type="submit"><c-icon name="brand-google" />{% translate "Продовжити з Google" %}</button>
         </form>
 
+        {% if demo_login %}
+          <form method="post" action="{% url 'core:demo_login' %}">
+            {% csrf_token %}
+            <button class="btn-cf demo-btn" type="submit"><c-icon name="users" />{% translate "Увійти в демо як Юра" %}</button>
+            <p class="login-fine">{% translate "Видно лише локально, коли DEBUG=True." %}</p>
+          </form>
+        {% endif %}
+
         {% block login_extra %}
           <hr class="auth-divider">
           <ul class="login-points">

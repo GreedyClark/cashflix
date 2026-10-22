@@ -6,8 +6,10 @@ app_name = "money"
 
 urlpatterns = [
     path("operations/", views.transaction_list, name="transactions"),
+    path("operations/export/", views.transaction_export, name="transaction_export"),
     path("operations/new/", views.transaction_create, name="transaction_create"),
     path("operations/<int:pk>/", views.transaction_edit, name="transaction_edit"),
+    path("operations/<int:pk>/not-duplicate/", views.transaction_not_duplicate, name="transaction_not_duplicate"),
     path("operations/<int:pk>/delete/", views.transaction_delete, name="transaction_delete"),
     path("operations/undo/", views.transaction_undo, name="transaction_undo"),
     path("categories/", category_views.category_list, name="categories"),

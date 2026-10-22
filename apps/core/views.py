@@ -1,6 +1,16 @@
-from django.shortcuts import render
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import get_user_model, login
+from django.contrib.auth.decorators import login_not_required
+from django.http import Http404
+from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
+from django.views.decorators.http import require_POST
+
+from .demo import USERS
 
 from .dashboard import Overview
+from .insights import Insights
 
 
 def home(request):
@@ -26,7 +36,21 @@ def home(request):
         "accounts": overview.accounts,
         "goals": overview.goals(),
         "upcoming": overview.upcoming(),
+        "insights": Insights(overview).all(),
         "chart_data": overview.chart_data(spending, half_year, categories),
     }
     template = "core/_overview.html" if request.headers.get("HX-Request") else "core/home.html"
     return render(request, template, context)
+
+
+@login_not_required
+@require_POST
+def demo_login(request):
+    if not settings.DEBUG:
+        raise Http404
+    user = get_user_model().objects.filter(email=USERS[0][0]).first()
+    if user is None:
+        messages.error(request, _("Демо ще немає. Запустіть python manage.py seed_demo."))
+        return redirect("account_login")
+    login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+    return redirect("core:home")

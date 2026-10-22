@@ -51,6 +51,14 @@
   </section>
 </div>
 
+{% if insights %}
+  <ul class="insight-row" aria-label="{% translate 'Підказки' %}">
+    {% for item in insights %}
+      <li class="insight {{ item.tone }}"><span class="insight-icon"><c-icon :name="item.icon" /></span><span>{{ item.text }}</span></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
 <div class="overview-grid">
   <section class="panel main-chart">
     <input class="range-input" type="radio" name="range" id="range-month" checked>

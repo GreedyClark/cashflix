@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Підключення" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ request.household.name }}</p>
+      <h1 class="page-title">{% translate "Підключення" %}</h1>
+    </div>
+  </div>
+
+  <div class="conn-page">
+    <section class="panel conn-card">
+      <div class="conn-head">
+        <span class="tx-icon tone-1"><c-icon name="device-mobile" /></span>
+        <div>
+          <h2>{% translate "Шорткат на iPhone" %}</h2>
+          <p class="bud-hint">{% translate "Оплата Apple Pay з будь-якого банку сама потрапляє в операції. Категорію CashFlix підбере сам." %}</p>
+        </div>
+        {% if token %}<span class="conn-status on">{% translate "підключено" %}</span>{% else %}<span class="conn-status">{% translate "не підключено" %}</span>{% endif %}
+      </div>
+
+      {% if raw_token %}
+        <div class="token-box">
+          <p class="token-title">{% translate "Ваш токен. Скопіюйте його зараз, бо пізніше його не буде видно." %}</p>
+          <div class="copy-box">
+            <input class="copy-input" id="shortcut-token" type="text" value="{{ raw_token }}" readonly aria-label="{% translate 'Токен' %}">
+            <button class="btn-cf" type="button" data-copy="#shortcut-token" data-copied="{% translate 'Скопійовано' %}"><c-icon name="copy" /><span>{% translate "Копіювати" %}</span></button>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if token %}
+        <dl class="conn-facts">
+          <div><dt>{% translate "Токен" %}</dt><dd class="num">{{ token.prefix }}…</dd></div>
+          <div><dt>{% translate "Створено" %}</dt><dd>{{ token.created_at|date:"j E Y" }}</dd></div>
+          <div><dt>{% translate "Остання операція" %}</dt><dd>{% if token.last_used_at %}{{ token.last_used_at|date:"j E, H:i" }}{% else %}{% translate "ще не було" %}{% endif %}</dd></div>
+        </dl>
+
+        <form class="conn-form" method="post">
+          {% csrf_token %}
+          <label class="f-label" for="{{ form.account.id_for_label }}">{% translate "Рахунок, якщо картку не впізнано" %}</label>
+          <div class="conn-row">
+            {{ form.account }}
+            <button class="btn-cf" type="submit">{% translate "Зберегти" %}</button>
+          </div>
+          <p class="field-help">{% translate "Назва картки з Wallet порівнюється з назвами рахунків. Назвіть рахунок як картку, наприклад «Монобанк», і операція потрапить куди треба." %}</p>
+        </form>
+
+        <div class="conn-actions">
+          <form method="post" action="{% url 'integrations:token_issue' %}">
+            {% csrf_token %}
+            <button class="btn-cf" type="submit"><c-icon name="repeat" />{% translate "Новий токен" %}</button>
+          </form>
+          <form method="post" action="{% url 'integrations:token_revoke' %}">
+            {% csrf_token %}
+            <button class="btn-cf ghost-danger" type="submit"><c-icon name="trash" />{% translate "Вимкнути" %}</button>
+          </form>
+        </div>
+      {% else %}
+        <form method="post" action="{% url 'integrations:token_issue' %}">
+          {% csrf_token %}
+          <button class="btn-cf primary" type="submit"><c-icon name="plus" />{% translate "Створити токен" %}</button>
+        </form>
+      {% endif %}
+    </section>
+
+    <section class="panel conn-card">
+      <h2 class="conn-subtitle">{% translate "Як налаштувати шорткат" %}</h2>
+      <ol class="conn-steps">
+        <li>{% blocktranslate %}Відкрийте «Команди» → «Автоматизація» → «+» → <b>Гаманець</b>. Оберіть свої картки й «Запускати одразу».{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}Додайте дію <b>«Отримати вміст URL»</b>, метод <b>POST</b>, адреса:{% endblocktranslate %}
+          <div class="copy-box">
+            <input class="copy-input" id="shortcut-url" type="text" value="{{ endpoint }}" readonly aria-label="{% translate 'Адреса' %}">
+            <button class="btn-cf" type="button" data-copy="#shortcut-url" data-copied="{% translate 'Скопійовано' %}"><c-icon name="copy" /><span>{% translate "Копіювати" %}</span></button>
+          </div>
+        </li>
+        <li>{% blocktranslate %}Заголовок <b>Authorization</b> зі значенням <code>Bearer ваш_токен</code>.{% endblocktranslate %}</li>
+        <li>{% translate "Тіло запиту JSON з полями:" %}
+          <table class="conn-table">
+            <tr><td><code>amount</code></td><td>{% translate "«Сума» з транзакції" %}</td></tr>
+            <tr><td><code>merchant</code></td><td>{% translate "«Продавець»" %}</td></tr>
+            <tr><td><code>card</code></td><td>{% translate "«Картка» або «Назва»" %}</td></tr>
+            <tr><td><code>time</code></td><td>{% translate "поточна дата, необов'язково" %}</td></tr>
+            <tr><td><code>id</code></td><td>{% translate "будь-який унікальний текст, необов'язково: захищає від повторного запису" %}</td></tr>
+          </table>
+        </li>
+        <li>{% blocktranslate %}За бажанням: «Отримати значення словника» <code>message</code> → «Показати сповіщення». Побачите, що записалось і в яку категорію.{% endblocktranslate %}</li>
+      </ol>
+      <p class="field-help">{% translate "Поки сайт працює лише на вашому комп'ютері, iPhone до нього не достукається. Шорткат запрацює після деплою, а перевірити ендпоінт можна запитом із самого комп'ютера." %}</p>
+    </section>
+
+    <section class="panel conn-card muted">
+      <div class="conn-head">
+        <span class="tx-icon tone-0"><c-icon name="credit-card" /></span>
+        <div>
+          <h2>{% translate "Monobank" %}</h2>
+          <p class="bud-hint">{% translate "Виписка з карток Monobank автоматично, разом із кодом категорії від банку. Наступний крок." %}</p>
+        </div>
+        <span class="conn-status">{% translate "скоро" %}</span>
+      </div>
+    </section>
+  </div>
+{% endblock %}

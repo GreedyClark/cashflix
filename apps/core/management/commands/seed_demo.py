@@ -8,6 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.budgets.models import Limit
+from apps.core.demo import HOUSEHOLD_NAME, PASSWORD, USERS
 from apps.goals.models import Goal, GoalContribution
 from apps.households.models import Household
 from apps.households.services import add_member, create_household
@@ -18,12 +19,6 @@ from apps.recurring.services import run_due_payments
 
 User = get_user_model()
 
-HOUSEHOLD_NAME = "Дім (демо)"
-PASSWORD = "demo12345"
-USERS = [
-    ("yura@demo.cashflix", "Юра"),
-    ("olya@demo.cashflix", "Олічка"),
-]
 
 # category: (merchants, typical amount, purchases per week)
 SPENDING = {
@@ -80,12 +75,13 @@ class Command(BaseCommand):
         household.transactions.all().delete()
         household.recurring_payments.all().delete()
         household.delete()
-        User.objects.filter(email__in=[email for email, _ in USERS]).delete()
 
     def create_people(self):
         people = []
         for email, name in USERS:
-            user = User.objects.create_user(email=email, password=PASSWORD, display_name=name)
+            user = User.objects.filter(email=email).first()
+            if user is None:
+                user = User.objects.create_user(email=email, password=PASSWORD, display_name=name)
             people.append(user)
         return people
 

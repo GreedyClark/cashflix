@@ -10,6 +10,7 @@
       <h1 class="page-title">{% translate "Операції" %}</h1>
     </div>
     <div class="page-actions">
+      {% include "money/_export_link.html" %}
       <button class="btn-cf primary" type="button" hx-get="{% url 'money:transaction_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Операція" %}</button>
     </div>
   </div>

@@ -3,3 +3,6 @@
 {% with day=form.selected_day %}
   {% if day %}<a class="day-chip" href="{% querystring day=None %}" title="{% translate 'Показати весь місяць' %}">{{ day|date:"j E" }}<c-icon name="x" /></a>{% endif %}
 {% endwith %}
+{% if review_count or form.review.value %}
+  <label class="chip-cf review-chip"><input type="checkbox" name="review" value="on"{% if form.review.value %} checked{% endif %}><c-icon name="check" />{% translate "Перевірити" %}<b>{{ review_count }}</b></label>
+{% endif %}

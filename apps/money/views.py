@@ -2,7 +2,8 @@ import calendar
 from datetime import timedelta
 from decimal import Decimal
 
-from django.db.models import Sum
+from django.db.models import Q, Sum
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
@@ -12,6 +13,8 @@ from django.views.decorators.http import require_POST
 from apps.core.htmx import toast_response
 
 from .accounts import load_accounts, month_flow, rate_changes
+from .categorize import remember
+from .export import build_workbook, file_name
 from .forms import AccountForm, TransactionFilterForm, TransactionForm, ValuationForm, next_month
 from .models import Account
 from .services import restore, snapshot
@@ -67,7 +70,7 @@ def transaction_list(request):
     earned = transactions.incomes().total_base()
     previous_month = (month - timedelta(days=1)).replace(day=1)
     following_month = next_month(month)
-    filter_names = ("q", "type", "category", "member", "account", "day")
+    filter_names = ("q", "type", "category", "member", "account", "day", "review")
     context = {
         "form": form,
         "days": days,
@@ -82,10 +85,26 @@ def transaction_list(request):
         "balance": earned - spent,
         "is_filtered": any(form.cleaned_data.get(name) for name in filter_names),
         "has_any": household.transactions.exists(),
+        "review_count": household.transactions.filter(Q(needs_review=True) | Q(duplicate_of__isnull=False)).count(),
         "refresh_filters": bool(request.headers.get("HX-Request")),
     }
     template = "money/_transaction_results.html" if request.headers.get("HX-Request") else "money/transaction_list.html"
     return render(request, template, context)
+
+
+def transaction_export(request):
+    household = request.household
+    data = request.GET.copy()
+    if not data.get("month"):
+        data["month"] = timezone.localdate().strftime("%Y-%m")
+    form = TransactionFilterForm(data, household=household)
+    form.is_valid()
+    base = household.transactions.select_related("category", "account", "to_account", "member__user")
+    transactions = form.filter(base).order_by("date", "created_at")
+    content = build_workbook(household, transactions, timezone.localdate())
+    response = HttpResponse(content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = f'attachment; filename="{file_name(form.cleaned_data["month"])}"'
+    return response
 
 
 CHANGED = ("transactionsChanged", "accountsChanged", "closeModal")
@@ -103,7 +122,9 @@ def transaction_form(request, transaction=None, initial=None):
         is_new = form.instance.pk is None
         if is_new:
             form.instance.created_by = request.user
-        form.save()
+        form.instance.needs_review = False
+        tx = form.save()
+        remember(tx)
         return toast_response(request, _("Операцію додано") if is_new else _("Зміни збережено"), events=CHANGED)
     return render(request, "money/_transaction_form.html", {"form": form, "transaction": transaction})
 
@@ -126,6 +147,14 @@ def transaction_delete(request, pk):
     request.session[UNDO_KEY] = snapshot(transaction)
     transaction.delete()
     return toast_response(request, _("Операцію видалено"), reverse("money:transaction_undo"), events=CHANGED)
+
+
+@require_POST
+def transaction_not_duplicate(request, pk):
+    transaction = get_object_or_404(request.household.transactions, pk=pk)
+    transaction.duplicate_of = None
+    transaction.save(update_fields=["duplicate_of"])
+    return toast_response(request, _("Позначено як окрему операцію"), events=CHANGED)
 
 
 @require_POST

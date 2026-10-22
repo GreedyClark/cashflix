@@ -1,0 +1,4 @@
+{% load i18n %}
+<a class="btn-cf" id="export-link"{% if oob %} hx-swap-oob="true"{% endif %} href="{% url 'money:transaction_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" download>
+  <c-icon name="file-spreadsheet" />{% translate "В Excel" %}
+</a>

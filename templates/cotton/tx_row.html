@@ -14,7 +14,9 @@
   <div class="tx-body">
     <div class="tx-name">
       <span>{{ tx.title }}</span>
-      {% if tx.source == "shortcut" %}<span class="tag-cf">Apple Pay</span>{% elif tx.source == "recurring" %}<span class="tag-cf">{% translate "регулярний" %}</span>{% endif %}
+      {% if tx.source == "shortcut" %}<span class="tag-cf">Apple Pay</span>{% elif tx.source == "monobank" %}<span class="tag-cf">Monobank</span>{% elif tx.source == "recurring" %}<span class="tag-cf">{% translate "регулярний" %}</span>{% endif %}
+      {% if tx.needs_review %}<span class="tag-cf warn">{% translate "перевірити" %}</span>{% endif %}
+      {% if tx.duplicate_of_id %}<span class="tag-cf crit">{% translate "можливий дубль" %}</span>{% endif %}
     </div>
     <div class="tx-meta">
       {% if tx.is_transfer %}

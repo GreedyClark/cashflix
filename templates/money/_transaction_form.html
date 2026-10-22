@@ -9,6 +9,19 @@
   </div>
 
   <div class="sheet-body">
+    {% if transaction.duplicate_of %}
+      <div class="notice-cf crit">
+        <p>{% blocktranslate with title=transaction.duplicate_of.title date=transaction.duplicate_of.date|date:"j E" %}Схоже на дубль операції «{{ title }}» від {{ date }}: той самий рахунок і сума з різницею в кілька хвилин.{% endblocktranslate %}</p>
+        <div class="notice-actions">
+          <button class="btn-cf sm" type="button" hx-get="{% url 'money:transaction_delete' transaction.pk %}" hx-target="#tx-dialog-body">{% translate "Це одна, видалити цю" %}</button>
+          <button class="btn-cf sm" type="button" hx-post="{% url 'money:transaction_not_duplicate' transaction.pk %}" hx-swap="none">{% translate "Це різні" %}</button>
+        </div>
+      </div>
+    {% elif transaction.needs_review %}
+      <div class="notice-cf warn">
+        <p>{% translate "Категорію підібрано автоматично, бо магазин ще незнайомий. Оберіть правильну й збережіть: наступні покупки тут CashFlix запам'ятає." %}</p>
+      </div>
+    {% endif %}
     <div class="seg-cf full" role="radiogroup" aria-label="{% translate 'Тип операції' %}">
       {% for radio in form.type %}<label>{{ radio.tag }}<span>{{ radio.choice_label|capfirst }}</span></label>{% endfor %}
     </div>
@@ -110,7 +123,7 @@
 
     {% if transaction %}
       <p class="f-meta">
-        {% if transaction.source == "shortcut" %}{% translate "Додано через Apple Pay" %}{% elif transaction.source == "recurring" %}{% translate "Створено регулярним платежем" %}{% else %}{% translate "Додано вручну" %}{% endif %}
+        {% if transaction.source == "shortcut" %}{% translate "Додано через Apple Pay" %}{% elif transaction.source == "monobank" %}{% translate "Додано з Monobank" %}{% elif transaction.source == "recurring" %}{% translate "Створено регулярним платежем" %}{% else %}{% translate "Додано вручну" %}{% endif %}
         · {{ transaction.created_at|date:"j E, H:i" }}{% if transaction.created_by %} · {{ transaction.created_by.name }}{% endif %}
       </p>
     {% endif %}

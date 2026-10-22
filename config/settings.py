@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.budgets",
     "apps.recurring",
     "apps.goals",
+    "apps.integrations",
     "apps.core",
 ]
 
@@ -60,6 +61,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "apps.core.context_processors.navigation",
+                "apps.core.context_processors.demo",
             ],
         },
     },

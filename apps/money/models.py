@@ -210,6 +210,7 @@ class Transaction(models.Model):
         SHORTCUT = "shortcut", _("шорткат")
         RECURRING = "recurring", _("регулярний платіж")
         IMPORT = "import", _("імпорт")
+        MONOBANK = "monobank", _("Monobank")
 
     household = models.ForeignKey(
         Household, on_delete=models.CASCADE, related_name="transactions", verbose_name=_("сім'я")
@@ -262,6 +263,17 @@ class Transaction(models.Model):
     )
 
     source = models.CharField(_("джерело"), max_length=10, choices=Source.choices, default=Source.MANUAL)
+    external_id = models.CharField(_("зовнішній id"), max_length=64, blank=True)
+    occurred_at = models.DateTimeField(_("час операції"), null=True, blank=True)
+    needs_review = models.BooleanField(_("перевірити категорію"), default=False)
+    duplicate_of = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("можливий дубль"),
+    )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -284,6 +296,11 @@ class Transaction(models.Model):
         ]
         constraints = [
             models.CheckConstraint(condition=Q(amount__gt=0), name="transaction_amount_positive"),
+            models.UniqueConstraint(
+                fields=["household", "source", "external_id"],
+                condition=~Q(external_id=""),
+                name="unique_external_transaction",
+            ),
         ]
 
     def __str__(self):
@@ -339,3 +356,21 @@ class Transaction(models.Model):
                 self.to_amount = (self.amount_base / to_rate).quantize(CENT, rounding=ROUND_HALF_UP)
 
         super().save(*args, **kwargs)
+
+class MerchantRule(models.Model):
+    household = models.ForeignKey(
+        Household, on_delete=models.CASCADE, related_name="merchant_rules", verbose_name=_("сім'я")
+    )
+    key = models.CharField(_("магазин"), max_length=80)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="+", verbose_name=_("категорія"))
+    updated_at = models.DateTimeField(_("оновлено"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("правило категорії")
+        verbose_name_plural = _("правила категорій")
+        constraints = [
+            models.UniqueConstraint(fields=["household", "key"], name="unique_merchant_rule"),
+        ]
+
+    def __str__(self):
+        return f"{self.key} → {self.category}"

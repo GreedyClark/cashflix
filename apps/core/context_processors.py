@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import reverse
 
 from .navigation import MAIN_MENU
@@ -14,3 +15,7 @@ def navigation(request):
             "active": url_name is not None and url_name == current,
         })
     return {"main_menu": items}
+
+
+def demo(request):
+    return {"demo_login": settings.DEBUG}

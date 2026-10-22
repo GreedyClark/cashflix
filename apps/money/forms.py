@@ -56,6 +56,7 @@ class TransactionFilterForm(forms.Form):
     category = forms.TypedChoiceField(required=False, coerce=int, empty_value=None)
     member = forms.ChoiceField(required=False)
     account = forms.TypedChoiceField(required=False, coerce=int, empty_value=None)
+    review = forms.BooleanField(required=False)
 
     def __init__(self, data, household):
         super().__init__(data)
@@ -82,7 +83,8 @@ class TransactionFilterForm(forms.Form):
     def filter(self, queryset, by_day=True):
         data = self.cleaned_data
         month = data.get("month") or month_start(None)
-        queryset = queryset.filter(date__gte=month, date__lt=next_month(month))
+        if not data.get("review"):
+            queryset = queryset.filter(date__gte=month, date__lt=next_month(month))
         if by_day and self.selected_day():
             queryset = queryset.filter(date=self.selected_day())
 
@@ -98,6 +100,8 @@ class TransactionFilterForm(forms.Form):
             queryset = queryset.filter(member_id=data["member"])
         if data.get("account"):
             queryset = queryset.filter(Q(account_id=data["account"]) | Q(to_account_id=data["account"]))
+        if data.get("review"):
+            queryset = queryset.filter(Q(needs_review=True) | Q(duplicate_of__isnull=False))
         return queryset
 
     @staticmethod
