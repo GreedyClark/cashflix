@@ -8,7 +8,7 @@ from django.utils.translation import gettext as _
 register = template.Library()
 
 SYMBOLS = {"UAH": "₴", "USD": "$", "EUR": "€"}
-THIN_SPACE = "\u202f"
+THIN_SPACE = " "
 
 
 @register.filter
@@ -21,7 +21,7 @@ def money(value, currency="UAH"):
 
     if currency == "UAH":
         amount = amount.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        return f"{sign}{amount:,}".replace(",", THIN_SPACE) + "\u00a0₴"
+        return f"{sign}{amount:,}".replace(",", THIN_SPACE) + " ₴"
 
     amount = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     return f"{sign}{SYMBOLS.get(currency, currency)}{amount:,}".replace(",", THIN_SPACE)
@@ -35,3 +35,8 @@ def day_label(value):
     if value == today - datetime.timedelta(days=1):
         return _("Вчора")
     return f"{dateformat.format(value, 'j E')}, {dateformat.format(value, 'l').lower()}"
+
+
+@register.filter
+def absolute(value):
+    return abs(value) if value is not None else value

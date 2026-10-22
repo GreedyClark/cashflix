@@ -1,25 +1,23 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}{% translate "Огляд" %} · CashFlix{% endblock %}
 
 {% block content %}
-  {% translate "Дашборд" as panel_title %}
-  {% translate "Тут з’явиться огляд бюджету" as empty_title %}
-
-  <div class="page-head">
-    <div>
-      <p class="eyebrow">{% now "F Y" %}</p>
-      <h1 class="page-title">{% translate "Огляд" %}</h1>
-    </div>
-    <div class="page-actions">
-      <button class="btn-cf primary" type="button" disabled><c-icon name="plus" />{% translate "Операція" %}</button>
-    </div>
+  <div id="overview"
+       hx-get="{% url 'core:home' %}{% if member %}?member={{ member.pk }}{% endif %}"
+       hx-trigger="transactionsChanged from:body" hx-disinherit="*">
+    {% include "core/_overview.html" %}
   </div>
 
-  <c-panel :title="panel_title">
-    <c-empty icon="report-money" :title="empty_title">
-      {% translate "Спершу додамо рахунки, категорії та операції. Після цього тут будуть баланс, витрати місяця, ліміти й цілі." %}
-    </c-empty>
-  </c-panel>
+  <button class="fab" type="button" hx-get="{% url 'money:transaction_create' %}" hx-target="#tx-dialog-body" aria-label="{% translate 'Нова операція' %}"><c-icon name="plus" /></button>
+
+  <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Операція' %}">
+    <div id="tx-dialog-body"></div>
+  </dialog>
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'vendor/apexcharts/apexcharts.min.js' %}" defer></script>
+  <script src="{% static 'js/charts.js' %}" defer></script>
 {% endblock %}

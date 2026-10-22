@@ -1,0 +1,246 @@
+{% load i18n money %}
+{% with currency=request.household.base_currency %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">{% blocktranslate with month=today|date:"F Y" day=today.day days=days_in_month %}{{ month }} · день {{ day }} з {{ days }}{% endblocktranslate %}</p>
+    <h1 class="page-title">{% translate "Огляд" %}</h1>
+  </div>
+  <div class="page-actions">
+    {% if members|length > 1 %}
+      <nav class="seg-cf people-seg" aria-label="{% translate 'Чиї витрати' %}">
+        <a class="{% if not member %}is-on{% endif %}" href="{% url 'core:home' %}">{% translate "Усі" %}</a>
+        {% for item in members %}
+          <a class="{% if member == item %}is-on{% endif %}" href="?member={{ item.pk }}"><span class="avatar-cf mini color-{{ item.color_slot }}">{{ item.user.initial }}</span>{{ item.user.name }}</a>
+        {% endfor %}
+      </nav>
+    {% endif %}
+    <button class="btn-cf primary" type="button" hx-get="{% url 'money:transaction_create' %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Операція" %}</button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <section class="panel kpi">
+    <div class="kpi-top"><span>{% translate "Баланс" %}</span></div>
+    <div class="kpi-value num">{{ kpis.balance|money:currency }}</div>
+    <div class="kpi-note">{% translate "усі рахунки за курсом НБУ" %}</div>
+    <div class="kpi-spark" data-chart="balance"></div>
+  </section>
+  <section class="panel kpi">
+    <div class="kpi-top">
+      <span>{% translate "Дохід" %}</span>
+      {% if kpis.earned_change %}<span class="delta {% if kpis.earned_change > 0 %}good{% else %}bad{% endif %}">{% if kpis.earned_change > 0 %}↑{% else %}↓{% endif %} {{ kpis.earned_change|absolute }}%</span>{% endif %}
+    </div>
+    <div class="kpi-value num">{{ kpis.earned|money:currency }}</div>
+    <div class="kpi-note">{% blocktranslate with month=today|date:"F"|lower %}за {{ month }}{% endblocktranslate %}</div>
+    <div class="kpi-spark" data-chart="earned"></div>
+  </section>
+  <section class="panel kpi">
+    <div class="kpi-top">
+      <span>{% translate "Витрати" %}</span>
+      {% if kpis.spent_change %}<span class="delta {% if kpis.spent_change > 0 %}bad{% else %}good{% endif %}">{% if kpis.spent_change > 0 %}↑{% else %}↓{% endif %} {{ kpis.spent_change|absolute }}%</span>{% endif %}
+    </div>
+    <div class="kpi-value num">{{ kpis.spent|money:currency }}</div>
+    <div class="kpi-note">{% blocktranslate with month=today|date:"F"|lower %}за {{ month }}{% endblocktranslate %}</div>
+    <div class="kpi-spark" data-chart="spent"></div>
+  </section>
+  <section class="panel kpi">
+    <div class="kpi-top"><span>{% translate "Заощаджено" %}</span></div>
+    <div class="kpi-value num">{% if kpis.savings is not None %}{{ kpis.savings }}<small>%</small>{% else %}—{% endif %}</div>
+    <div class="kpi-note">{% translate "прогноз на кінець місяця" %}</div>
+    <div class="kpi-spark" data-chart="savings"></div>
+  </section>
+</div>
+
+<div class="overview-grid">
+  <section class="panel main-chart">
+    <input class="range-input" type="radio" name="range" id="range-month" checked>
+    <input class="range-input" type="radio" name="range" id="range-half">
+    <header class="panel-head">
+      <div>
+        <h2 class="panel-title range-month">{% blocktranslate with month=today|date:"F"|lower %}Витрати за {{ month }}{% endblocktranslate %}</h2>
+        <h2 class="panel-title range-half">{% translate "Дохід і витрати" %}</h2>
+        <p class="panel-sub range-month">{% translate "наростаючим підсумком" %}</p>
+        <p class="panel-sub range-half">{% translate "останні 6 місяців" %}</p>
+      </div>
+      <div class="panel-actions seg-cf">
+        <label for="range-month">{% translate "Місяць" %}</label>
+        <label for="range-half">{% translate "6 місяців" %}</label>
+      </div>
+    </header>
+
+    <div class="panel-body">
+      <div class="range-month">
+        <div class="hero-line">
+          <span class="hero-num num">{{ spending.total|money:currency }}</span>
+          {% if spending.change %}<span class="delta {% if spending.change > 0 %}bad{% else %}good{% endif %}">{% if spending.change > 0 %}↑{% else %}↓{% endif %} {% blocktranslate with value=spending.change|absolute %}{{ value }}% до минулого місяця{% endblocktranslate %}</span>{% endif %}
+          <span class="hero-sub">{% translate "прогноз на місяць" %} <b class="num">{{ spending.forecast|money:currency }}</b></span>
+        </div>
+        <div class="chart-legend">
+          <span><i class="sw sw-current"></i>{{ today|date:"F" }}</span>
+          <span><i class="sw sw-forecast"></i>{% translate "Прогноз" %}</span>
+          <span><i class="sw sw-previous"></i>{% translate "Минулий місяць" %}</span>
+          <span><i class="sw sw-income"></i>{% translate "Дохід місяця" %}</span>
+        </div>
+      </div>
+      <div class="range-half">
+        <div class="hero-line">
+          <span class="hero-num num">{{ half_year.average_saved|money:currency }}</span>
+          <span class="hero-sub">{% translate "у середньому лишається щомісяця" %}</span>
+        </div>
+        <div class="chart-legend">
+          <span><i class="sw sw-earned"></i>{% translate "Дохід" %}</span>
+          <span><i class="sw sw-spent"></i>{% translate "Витрати" %}</span>
+        </div>
+      </div>
+
+      <div class="chart-stack">
+        <div class="range-month" data-chart="spending"></div>
+        <div class="range-half" data-chart="halfYear"></div>
+      </div>
+    </div>
+
+    <dl class="mini-stats range-month">
+      <div><dt>{% translate "У середньому на день" %}</dt><dd class="num">{{ spending.per_day|money:currency }}</dd></div>
+      <div>
+        <dt>{% translate "Найдорожчий день" %}</dt>
+        {% if spending.biggest_day %}<dd class="num">{{ spending.biggest_day.1|money:currency }}</dd><dd class="mini-sub">{{ spending.biggest_day.0|date:"j E" }}</dd>{% else %}<dd>—</dd>{% endif %}
+      </div>
+      <div>
+        {% if spending.room_per_day %}
+          <dt>{% translate "Можна витрачати до кінця місяця" %}</dt>
+          <dd class="num">{{ spending.room_per_day|money:currency }}{% translate "/день" %}</dd>
+          <dd class="mini-sub">{% translate "щоб не вийти за дохід" %}</dd>
+        {% else %}
+          <dt>{% translate "Витрати перевищили дохід" %}</dt>
+          <dd class="num">{{ spending.room|money:currency }}</dd>
+        {% endif %}
+      </div>
+    </dl>
+    <dl class="mini-stats range-half">
+      <div>
+        <dt>{% translate "Найкращий місяць" %}</dt>
+        <dd class="num">{{ half_year.best_saved|money:currency }}</dd>
+        {% if half_year.best_month %}<dd class="mini-sub">{{ half_year.best_month|date:"F"|lower }} — {% translate "лишилось" %}</dd>{% endif %}
+      </div>
+      <div><dt>{% translate "Цей місяць, поки що" %}</dt><dd class="num">{{ spending.room|money:currency }}</dd><dd class="mini-sub">{% translate "лишається" %}</dd></div>
+      <div><dt>{% translate "За пів року відкладено" %}</dt><dd class="num">{{ half_year.total_saved|money:currency }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div><h2 class="panel-title">{% translate "Куди йдуть гроші" %}</h2></div>
+      <span class="panel-actions panel-sub">{% blocktranslate with month=today|date:"F"|lower %}{{ month }} · до минулого{% endblocktranslate %}</span>
+    </header>
+    <div class="panel-body">
+      {% if categories %}
+        <div class="donut-wrap">
+          <div data-chart="categories"></div>
+          <div class="donut-center">
+            <span>{% translate "Усього витрат" %}</span>
+            <b class="num">{{ spending.total|money:currency }}</b>
+          </div>
+        </div>
+        <ul class="cat-list">
+          {% for item in categories %}
+            <li>
+              <span class="tx-icon tone-{{ item.category.color_slot }}"><c-icon :name="item.category.icon" /></span>
+              <span class="cat-list-name">{{ item.category.name }}</span>
+              <span class="num">{{ item.amount|money:currency }}</span>
+              <span class="cat-change num">{% if item.change is None %}{% elif item.change > 0 %}<em class="bad">↑{{ item.change }}%</em>{% elif item.change < 0 %}<em class="good">↓{{ item.change|absolute }}%</em>{% else %}≈{% endif %}</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <c-empty icon="report-money" title="{% translate 'Витрат цього місяця ще немає' %}">{% translate "Додайте першу операцію, і тут з'явиться розподіл за категоріями." %}</c-empty>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div><h2 class="panel-title">{% translate "Ліміти" %}</h2></div>
+    </header>
+    <div class="panel-body">
+      {% if limits %}
+        <ul class="limit-list">
+          {% for item in limits %}
+            <li class="limit-row">
+              <span class="tx-icon tone-{{ item.limit.category.color_slot }}"><c-icon :name="item.limit.category.icon" /></span>
+              <div class="limit-body">
+                <div class="limit-top">
+                  <span class="limit-name">{{ item.limit.category.name }}</span>
+                  {% if item.limit.member %}<span class="avatar-cf mini color-{{ item.limit.member.color_slot }}" title="{{ item.limit.member.user.name }}">{{ item.limit.member.user.initial }}</span>{% else %}<span class="limit-shared" title="{% translate 'Спільний ліміт' %}"><c-icon name="users" /></span>{% endif %}
+                  <span class="limit-left num state-{{ item.state }}">
+                    {% if item.left >= 0 %}<b>{{ item.left|money:currency }}</b> {% translate "лишилось" %}{% else %}<b>{{ item.left|absolute|money:currency }}</b> {% translate "понад ліміт" %}{% endif %}
+                  </span>
+                </div>
+                <div class="limit-bar state-{{ item.state }}"><i style="width: {{ item.percent }}%"></i><span class="limit-pace" style="left: {{ pace }}%"></span></div>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="panel-text">{% translate "Лімітів ще немає. Налаштування лімітів з'явиться в розділі «Бюджет і ліміти»." %}</p>
+      {% endif %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div><h2 class="panel-title">{% translate "Останні операції" %}</h2></div>
+      <a class="panel-actions link-cf" href="{% url 'money:transactions' %}">{% translate "Усі операції" %}</a>
+    </header>
+    <div class="panel-body recent">
+      {% for day in recent %}
+        <div class="day-head"><span>{{ day.date|day_label }}</span></div>
+        <ul class="tx-list">{% for tx in day.items %}<c-tx-row :tx="tx" />{% endfor %}</ul>
+      {% empty %}
+        <p class="panel-text">{% translate "Операцій ще немає." %}</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div><h2 class="panel-title">{% translate "Рахунки" %}</h2></div>
+      <span class="panel-actions panel-sub num">{{ kpis.balance|money:currency }}</span>
+    </header>
+    <div class="panel-body">
+      <div class="account-grid">
+        {% for account in accounts %}
+          <div class="account-card">
+            <span class="account-name"><c-icon :name="account.icon" />{{ account.name }}</span>
+            <span class="account-balance num">{{ account.balance|money:account.currency }}</span>
+            <span class="account-sub">{% if account.currency != currency and account.converted is not None %}≈ {{ account.converted|money:currency }}{% elif account.owner %}{{ account.owner.user.name }}{% else %}{% translate "Спільний" %}{% endif %}</span>
+          </div>
+        {% empty %}
+          <p class="panel-text">{% translate "Рахунків ще немає." %}</p>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <header class="panel-head">
+      <div><h2 class="panel-title">{% translate "Цілі" %}</h2></div>
+    </header>
+    <div class="panel-body">
+      {% for item in goals %}
+        <div class="goal-row">
+          <div class="goal-ring" style="--progress: {{ item.progress }}"><span class="num">{{ item.progress }}%</span></div>
+          <div class="goal-body">
+            <div class="goal-name"><c-icon :name="item.goal.icon" />{{ item.goal.name }}</div>
+            <div class="goal-meta num">{% blocktranslate with saved=item.saved|money:currency target=item.goal.target_amount|money:currency left=item.left|money:currency %}{{ saved }} з {{ target }} · лишилось {{ left }}{% endblocktranslate %}</div>
+            {% if item.monthly %}<div class="goal-plan">{% blocktranslate with amount=item.monthly|money:currency date=item.goal.deadline|date:"F Y"|lower %}Відкладайте {{ amount }} щомісяця, щоб встигнути до {{ date }}{% endblocktranslate %}</div>{% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p class="panel-text">{% translate "Цілей ще немає." %}</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{{ chart_data|json_script:"overview-data" }}
+{% endwith %}
