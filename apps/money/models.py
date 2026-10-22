@@ -93,6 +93,8 @@ class Account(models.Model):
         SAVINGS = "savings", _("накопичувальний")
         INVESTMENT = "investment", _("інвестиційний")
 
+    ICONS = {"card": "credit-card", "cash": "cash", "savings": "pig-money", "investment": "chart-line"}
+
     household = models.ForeignKey(
         Household, on_delete=models.CASCADE, related_name="accounts", verbose_name=_("господарство")
     )
@@ -125,6 +127,10 @@ class Account(models.Model):
     def clean(self):
         if self.owner_id and self.owner.household_id != self.household_id:
             raise ValidationError({"owner": _("Власник має бути учасником цього господарства.")})
+
+    @property
+    def icon(self):
+        return self.ICONS[self.kind]
 
     def get_balance(self):
         return Account.objects.with_balance().get(pk=self.pk).balance

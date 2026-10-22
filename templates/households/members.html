@@ -13,6 +13,21 @@
         · {% translate "основна валюта" %} {{ request.household.get_base_currency_display|lower }}
       </p>
     </div>
+    {% if other_memberships %}
+      <div class="page-actions">
+        <details class="menu-cf">
+          <summary class="btn-cf"><c-icon name="arrows-exchange" />{% translate "Інша сім'я" %}</summary>
+          <div class="menu-pop">
+            {% for membership in other_memberships %}
+              <form method="post" action="{% url 'households:switch' membership.household_id %}">
+                {% csrf_token %}
+                <button class="menu-item" type="submit"><span class="avatar-cf mini color-{{ membership.color_slot }}">{{ membership.household.name|first }}</span>{{ membership.household.name }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        </details>
+      </div>
+    {% endif %}
   </div>
 
   <div class="family-layout">

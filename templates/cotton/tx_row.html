@@ -1,0 +1,37 @@
+{% load i18n money %}
+<c-vars tx />
+<li class="tx">
+  {% if tx.is_transfer %}
+    <span class="tx-icon tone-0"><c-icon name="arrows-exchange" /></span>
+  {% else %}
+    <span class="tx-icon tone-{{ tx.category.color_slot }}">
+      <c-icon :name="tx.category.icon" />
+      {% if tx.member %}<span class="avatar-cf micro color-{{ tx.member.color_slot }}" title="{{ tx.member.user.name }}">{{ tx.member.user.initial }}</span>{% endif %}
+    </span>
+  {% endif %}
+
+  <div class="tx-body">
+    <div class="tx-name">
+      <span>{{ tx.title }}</span>
+      {% if tx.source == "shortcut" %}<span class="tag-cf">Apple Pay</span>{% elif tx.source == "recurring" %}<span class="tag-cf">{% translate "регулярний" %}</span>{% endif %}
+    </div>
+    <div class="tx-meta">
+      {% if tx.is_transfer %}
+        {{ tx.account.name }} → {{ tx.to_account.name }}
+      {% else %}
+        <span class="tx-meta-category">{{ tx.category.name }} · </span>{{ tx.account.name }} · {% if tx.member %}{{ tx.member.user.name }}{% else %}{% translate "Спільне" %}{% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if tx.is_transfer %}
+    <span class="cat-chip tone-0"><i></i>{% translate "Переказ" %}</span>
+  {% else %}
+    <span class="cat-chip tone-{{ tx.category.color_slot }}"><i></i>{{ tx.category.name }}</span>
+  {% endif %}
+
+  <div class="tx-amount num{% if tx.type == 'income' %} plus{% endif %}">
+    {% if tx.type == "expense" %}−{% elif tx.type == "income" %}+{% endif %}{{ tx.amount|money:tx.currency }}
+    {% if tx.currency != request.household.base_currency %}<small>≈ {{ tx.amount_base|money:request.household.base_currency }}</small>{% endif %}
+  </div>
+</li>

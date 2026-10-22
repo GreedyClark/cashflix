@@ -35,8 +35,18 @@ def members(request):
         "invitation": invitation,
         "invite_url": request.build_absolute_uri(invitation.get_absolute_url()) if invitation else "",
         "is_owner": request.membership.is_owner,
+        "other_memberships": request.user.memberships.active()
+        .exclude(household=household)
+        .select_related("household"),
     }
     return render(request, "households/members.html", context)
+
+
+@require_POST
+def switch(request, pk):
+    membership = get_object_or_404(Membership.objects.active(), household_id=pk, user=request.user)
+    request.session[SESSION_KEY] = membership.household_id
+    return redirect("households:members")
 
 
 def owner_required(request):

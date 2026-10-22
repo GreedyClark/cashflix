@@ -4,7 +4,13 @@ from decimal import Decimal
 import pytest
 from django.urls import reverse
 
-from apps.households.services import accept_invitation, create_invitation, month_spending, remove_member
+from apps.households.services import (
+    accept_invitation,
+    create_household,
+    create_invitation,
+    month_spending,
+    remove_member,
+)
 from apps.money.models import Transaction
 
 
@@ -85,3 +91,23 @@ def test_former_member_rejoins_with_same_color(home, yura, olya):
     assert membership.pk == olya.pk
     assert membership.left_at is None
     assert membership.color_slot == slot
+
+
+def test_user_switches_between_families(client, home, olya):
+    own = create_household(olya.user, "Мій дім")
+    client.force_login(olya.user)
+    client.post(reverse("households:switch", args=[own.pk]))
+    assert client.get(reverse("households:members")).context["request"].household == own
+
+    response = client.post(reverse("households:switch", args=[home.pk]))
+
+    assert response.status_code == 302
+    assert client.get(reverse("households:members")).context["request"].household == home
+
+
+def test_cannot_switch_to_foreign_family(client, olya, user_household):
+    client.force_login(olya.user)
+
+    response = client.post(reverse("households:switch", args=[user_household.pk]))
+
+    assert response.status_code == 404
