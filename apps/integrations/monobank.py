@@ -20,11 +20,17 @@ class MonobankRateLimit(MonobankError):
     pass
 
 
-def request(token, path):
-    req = Request(BASE_URL + path, headers={"X-Token": token, "User-Agent": "CashFlix"})
+def request(token, path, payload=None):
+    headers = {"X-Token": token, "User-Agent": "CashFlix"}
+    data = None
+    if payload is not None:
+        data = json.dumps(payload).encode()
+        headers["Content-Type"] = "application/json"
+    req = Request(BASE_URL + path, data=data, headers=headers, method="POST" if data else "GET")
     try:
         with urlopen(req, timeout=10) as response:
-            return json.load(response)
+            body = response.read()
+            return json.loads(body) if body.strip() else {}
     except HTTPError as error:
         if error.code in (401, 403):
             raise MonobankAuthError("token") from error
@@ -41,3 +47,7 @@ def client_info(token):
 
 def statement(token, account_id, since, until):
     return request(token, f"/personal/statement/{account_id}/{int(since)}/{int(until)}")
+
+
+def set_webhook(token, url):
+    return request(token, "/personal/webhook", {"webHookUrl": url})

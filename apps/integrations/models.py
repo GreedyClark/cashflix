@@ -69,6 +69,7 @@ class MonobankConnection(models.Model):
     )
     token_encrypted = models.TextField()
     client_name = models.CharField(_("ім'я в банку"), max_length=120, blank=True)
+    webhook_secret = models.CharField(max_length=64, blank=True, db_index=True)
     last_request_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(_("підключено"), auto_now_add=True)
 

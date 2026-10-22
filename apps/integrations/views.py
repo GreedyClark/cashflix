@@ -1,3 +1,5 @@
+import secrets
+
 from django import forms
 from django.contrib import messages
 from django.db import IntegrityError, transaction
@@ -155,7 +157,38 @@ def monobank_sync(request, pk):
 
 
 @require_POST
+def monobank_webhook_toggle(request):
+    connection = get_object_or_404(MonobankConnection, membership=request.membership)
+    if not request.is_secure():
+        messages.error(request, _("Миттєві операції працюють лише на сайті з HTTPS, тобто після деплою."))
+        return redirect("integrations:connections")
+    enable = not connection.webhook_secret
+    secret = secrets.token_urlsafe(24) if enable else ""
+    url = request.build_absolute_uri(reverse("integrations:monobank_webhook", args=[secret])) if enable else ""
+    connection.webhook_secret = secret
+    connection.save(update_fields=["webhook_secret"])
+    try:
+        monobank.set_webhook(connection.token, url)
+    except monobank.MonobankError as error:
+        connection.webhook_secret = ""
+        connection.save(update_fields=["webhook_secret"])
+        bank_error(request, error)
+    else:
+        if enable:
+            messages.success(request, _("Готово: нові операції Monobank приходитимуть одразу після оплати."))
+        else:
+            messages.success(request, _("Миттєві операції вимкнено. Оновлюйте картки кнопкою «Оновити»."))
+    return redirect("integrations:connections")
+
+
+@require_POST
 def monobank_disconnect(request):
+    connection = MonobankConnection.objects.filter(membership=request.membership).first()
+    if connection and connection.webhook_secret:
+        try:
+            monobank.set_webhook(connection.token, "")
+        except monobank.MonobankError:
+            pass
     MonobankConnection.objects.filter(membership=request.membership).delete()
     messages.success(request, _("Monobank відключено. Вже підтягнуті операції лишилися."))
     return redirect("integrations:connections")

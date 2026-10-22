@@ -14,6 +14,7 @@ Django==5.2.18
 et_xmlfile==2.0.0
 google-auth==2.62.0
 google-genai==2.32.0
+gunicorn==26.2.0
 h11==0.16.0
 httpcore==1.0.9
 httpx==0.28.1
@@ -23,6 +24,8 @@ oauthlib==4.0.0
 openpyxl==3.1.5
 packaging==26.3
 pluggy==1.6.0
+psycopg-binary==3.3.6
+psycopg==3.3.6
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pycparser==3.11
@@ -41,3 +44,4 @@ typing_extensions==4.16.0
 tzdata==2026.5
 urllib3==2.8.0
 websockets==16.1.1
+whitenoise==6.12.0

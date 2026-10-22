@@ -135,6 +135,14 @@
         {% endfor %}
         <p class="field-help">{% translate "Перший раз підтягуються операції за 7 днів. Monobank дозволяє один запит на хвилину, тож картки оновлюйте по черзі. Перекази між вашими картками стануть переказами, а не витратою й доходом." %}</p>
         <div class="conn-actions">
+          <form method="post" action="{% url 'integrations:monobank_webhook_toggle' %}">
+            {% csrf_token %}
+            {% if connection.webhook_secret %}
+              <button class="btn-cf" type="submit"><c-icon name="bolt" />{% translate "Вимкнути миттєві операції" %}</button>
+            {% else %}
+              <button class="btn-cf primary" type="submit"><c-icon name="bolt" />{% translate "Увімкнути миттєві операції" %}</button>
+            {% endif %}
+          </form>
           <form method="post" action="{% url 'integrations:monobank_refresh' %}">
             {% csrf_token %}
             <button class="btn-cf" type="submit"><c-icon name="repeat" />{% translate "Оновити список карток" %}</button>

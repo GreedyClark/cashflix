@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.decorators import login_not_required
+from django.db import transaction as db_transaction
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -10,8 +11,9 @@ from apps.money.ingest import ingest
 from apps.money.models import Account, Transaction
 from apps.money.rates import RateNotFound
 
-from .models import MonobankAccount, ShortcutToken
+from .models import MonobankAccount, MonobankConnection, ShortcutToken
 from .parsing import BadPayload, match_account, parse_amount, parse_moment
+from .sync import process_item
 
 MESSAGES = {
     "amount": "Не вдалося прочитати суму.",
@@ -107,3 +109,31 @@ def summary(tx, status):
     if tx.duplicate_of_id:
         text += " · можливий дубль"
     return text
+
+
+@csrf_exempt
+@login_not_required
+def monobank_webhook(request, secret):
+    connection = MonobankConnection.objects.filter(webhook_secret=secret).exclude(webhook_secret="").first()
+    if connection is None:
+        return JsonResponse({"status": "unknown"}, status=404)
+    if request.method != "POST":
+        return JsonResponse({"status": "ok"})
+    try:
+        payload = json.loads(request.body or b"{}")
+        data = payload["data"]
+        item = data["statementItem"]
+        mono_id = data["account"]
+    except (ValueError, KeyError, TypeError):
+        return JsonResponse({"status": "ignored"})
+    mono_account = connection.accounts.filter(mono_id=mono_id, account__isnull=False).select_related(
+        "account__household", "connection__membership"
+    ).first()
+    if mono_account is None:
+        return JsonResponse({"status": "ignored"})
+    try:
+        with db_transaction.atomic():
+            status = process_item(mono_account, item)
+    except RateNotFound:
+        return JsonResponse({"status": "error"})
+    return JsonResponse({"status": status})

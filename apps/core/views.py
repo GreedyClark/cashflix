@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_not_required
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
@@ -54,3 +54,8 @@ def demo_login(request):
         return redirect("account_login")
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     return redirect("core:home")
+
+
+@login_not_required
+def health(request):
+    return HttpResponse("ok", content_type="text/plain")
