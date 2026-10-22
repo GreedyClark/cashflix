@@ -80,12 +80,10 @@
     {% endfor %}
   </nav>
 
-  <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
-  <script src="{% static 'js/copy.js' %}" defer></script>
-  <div class="toast-zone" id="toast-zone" aria-live="polite" data-undo-label="{% translate 'Повернути' %}"></div>
+  <div class="toast-zone" id="toast-zone" aria-live="polite"></div>
 
-  <script src="{% static 'js/dialog.js' %}" defer></script>
-  <script src="{% static 'js/toast.js' %}" defer></script>
+  <script src="{% static 'vendor/htmx/htmx.min.js' %}" defer></script>
+  <script src="{% static 'js/app.js' %}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

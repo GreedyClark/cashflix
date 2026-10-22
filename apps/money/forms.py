@@ -144,6 +144,9 @@ def menu(name, icon, placeholder, options, align="start"):
 
 
 class TransactionForm(forms.ModelForm):
+    WHEN_CHOICES = [("today", _("Сьогодні")), ("yesterday", _("Вчора")), ("other", _("Інша дата"))]
+
+    when = forms.ChoiceField(choices=WHEN_CHOICES, widget=forms.RadioSelect, required=False)
     amount = forms.DecimalField(
         label=_("Сума"),
         localize=True,
@@ -177,14 +180,31 @@ class TransactionForm(forms.ModelForm):
         self.fields["to_account"].queryset = household.accounts.filter(is_archived=False)
         self.fields["member"].queryset = household.memberships.active().select_related("user")
 
+        self.fields["date"].required = False
+
         if self.instance.pk:
             self.initial["amount"] = format_amount(self.instance.amount)
+            self.initial["when"] = when_for(self.instance.date)
         else:
             self.initial.setdefault("member", membership)
             self.initial.setdefault("account", default_account(household, membership))
+            self.initial["when"] = "today"
 
     def clean(self):
         cleaned = super().clean()
+        today = timezone.localdate()
+        when = cleaned.get("when") or "other"
+        if when == "today":
+            cleaned["date"] = today
+        elif when == "yesterday":
+            cleaned["date"] = today - datetime.timedelta(days=1)
+        elif not cleaned.get("date"):
+            self.add_error("date", _("Оберіть дату."))
+
+        category = cleaned.get("category")
+        if category and category.kind != cleaned.get("type"):
+            cleaned["category"] = None
+
         if cleaned.get("type") == Transaction.Type.TRANSFER:
             cleaned["category"] = None
             self.instance.category = None
@@ -214,6 +234,15 @@ class TransactionForm(forms.ModelForm):
     def pills(self, name):
         selected = str(self[name].value() or "")
         return [{"object": obj, "checked": str(obj.pk) == selected} for obj in self.fields[name].queryset]
+
+
+def when_for(date):
+    today = timezone.localdate()
+    if date == today:
+        return "today"
+    if date == today - datetime.timedelta(days=1):
+        return "yesterday"
+    return "other"
 
 
 def format_amount(value):

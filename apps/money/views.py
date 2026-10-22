@@ -1,19 +1,20 @@
 import calendar
-import json
 from datetime import timedelta
 
 from django.db.models import Sum
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
+from apps.core.htmx import toast_response
+
 from .forms import TransactionFilterForm, TransactionForm, next_month
 from .services import restore, snapshot
 
 UNDO_KEY = "undo_transaction"
+CHANGED = ("transactionsChanged", "closeModal")
 
 
 def daily_bars(month, spent_by_day, selected):
@@ -79,18 +80,10 @@ def transaction_list(request):
         "balance": earned - spent,
         "is_filtered": any(form.cleaned_data.get(name) for name in filter_names),
         "has_any": household.transactions.exists(),
+        "refresh_filters": bool(request.headers.get("HX-Request")),
     }
     template = "money/_transaction_results.html" if request.headers.get("HX-Request") else "money/transaction_list.html"
     return render(request, template, context)
-
-
-def changed(message, undo_url=None):
-    response = HttpResponse(status=204)
-    response["HX-Trigger"] = json.dumps({
-        "transactionsChanged": True,
-        "showToast": {"message": message, "undo": undo_url},
-    })
-    return response
 
 
 def transaction_form(request, transaction=None):
@@ -105,7 +98,7 @@ def transaction_form(request, transaction=None):
         if is_new:
             form.instance.created_by = request.user
         form.save()
-        return changed(_("Операцію додано") if is_new else _("Зміни збережено"))
+        return toast_response(request, _("Операцію додано") if is_new else _("Зміни збережено"), events=CHANGED)
     return render(request, "money/_transaction_form.html", {"form": form, "transaction": transaction})
 
 
@@ -125,7 +118,7 @@ def transaction_delete(request, pk):
 
     request.session[UNDO_KEY] = snapshot(transaction)
     transaction.delete()
-    return changed(_("Операцію видалено"), reverse("money:transaction_undo"))
+    return toast_response(request, _("Операцію видалено"), reverse("money:transaction_undo"), events=CHANGED)
 
 
 @require_POST
@@ -133,4 +126,4 @@ def transaction_undo(request):
     data = request.session.pop(UNDO_KEY, None)
     if data:
         restore(request.household, data)
-    return changed(_("Операцію повернуто"))
+    return toast_response(request, _("Операцію повернуто"), events=CHANGED)

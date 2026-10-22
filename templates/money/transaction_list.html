@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n static %}
+{% load i18n %}
 
 {% block title %}{% translate "Операції" %} · CashFlix{% endblock %}
 
@@ -26,16 +26,13 @@
     <div class="seg-cf" role="radiogroup" aria-label="{% translate 'Тип операції' %}">
       {% for radio in form.type %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
     </div>
-    <div class="filter-chips">
-      {% for menu in form.menus %}<c-filter-menu :menu="menu" />{% endfor %}
-      {% with day=form.selected_day %}
-        {% if day %}<a class="day-chip" href="{% querystring day=None %}" title="{% translate 'Показати весь місяць' %}">{{ day|date:"j E" }}<c-icon name="x" /></a>{% endif %}
-      {% endwith %}
+    <div class="filter-chips" id="filter-chips">
+      {% include "money/_filter_chips.html" %}
     </div>
   </form>
 
   <div id="tx-results" class="tx-results"
-       hx-get="{% url 'money:transactions' %}" hx-trigger="transactionsChanged from:body" hx-include="#tx-filter">
+       hx-get="{% url 'money:transactions' %}" hx-trigger="transactionsChanged from:body" hx-include="#tx-filter" hx-disinherit="*">
     {% include "money/_transaction_results.html" %}
   </div>
 
@@ -44,9 +41,4 @@
   <dialog class="sheet-cf" id="tx-dialog" aria-label="{% translate 'Операція' %}">
     <div id="tx-dialog-body"></div>
   </dialog>
-{% endblock %}
-
-{% block scripts %}
-  <script src="{% static 'js/filters.js' %}" defer></script>
-  <script src="{% static 'js/transactions.js' %}" defer></script>
 {% endblock %}

@@ -80,3 +80,9 @@
   </section>
 {% endif %}
 {% endwith %}
+
+{% if refresh_filters %}
+  <div class="filter-chips" id="filter-chips" hx-swap-oob="true">
+    {% include "money/_filter_chips.html" %}
+  </div>
+{% endif %}

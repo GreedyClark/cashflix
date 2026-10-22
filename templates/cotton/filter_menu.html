@@ -1,8 +1,8 @@
 <c-vars menu />
-<details class="menu-cf chip-menu align-{{ menu.align }}" data-filter-menu>
+<details class="menu-cf chip-menu align-{{ menu.align }}">
   <summary class="chip-cf{% if menu.label %} is-set{% endif %}">
     <c-icon :name="menu.icon" />
-    <span data-chip-label data-placeholder="{{ menu.placeholder }}">{{ menu.label|default:menu.placeholder }}</span>
+    <span>{{ menu.label|default:menu.placeholder }}</span>
     <c-icon name="chevron-down" />
   </summary>
   <div class="chip-pop" role="radiogroup" aria-label="{{ menu.placeholder }}">
@@ -11,7 +11,7 @@
         <div class="chip-heading">{{ option.heading }}</div>
       {% else %}
         <label class="chip-option">
-          <input type="radio" name="{{ menu.name }}" value="{{ option.value }}" data-label="{% if option.value != '' %}{{ option.label }}{% endif %}"{% if option.checked %} checked{% endif %}>
+          <input type="radio" name="{{ menu.name }}" value="{{ option.value }}"{% if option.checked %} checked{% endif %}>
           {% if option.icon %}
             <span class="chip-option-icon tone-{{ option.tone }}"><c-icon :name="option.icon" /></span>
           {% elif option.initial %}

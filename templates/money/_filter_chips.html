@@ -1,0 +1,5 @@
+{% load i18n %}
+{% for menu in form.menus %}<c-filter-menu :menu="menu" />{% endfor %}
+{% with day=form.selected_day %}
+  {% if day %}<a class="day-chip" href="{% querystring day=None %}" title="{% translate 'Показати весь місяць' %}">{{ day|date:"j E" }}<c-icon name="x" /></a>{% endif %}
+{% endwith %}

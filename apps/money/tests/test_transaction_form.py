@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.households.services import create_household
 from apps.money.models import Transaction
@@ -24,7 +25,10 @@ def silpo(home, mono, food, olya):
 
 
 def payload(**fields):
-    data = {"type": "expense", "amount": "486,50", "title": "Сільпо", "date": "2026-10-14", "member": "", "note": ""}
+    data = {
+        "type": "expense", "amount": "486,50", "title": "Сільпо", "when": "other", "date": "2026-10-14",
+        "member": "", "note": "",
+    }
     data.update(fields)
     return data
 
@@ -43,8 +47,9 @@ def test_create_expense_with_comma_amount(yura_client, home, mono, food, yura):
         reverse("money:transaction_create"), payload(account=mono.pk, category=food.pk, member=yura.pk)
     )
 
-    assert response.status_code == 204
+    assert response.status_code == 200
     assert json.loads(response["HX-Trigger"])["transactionsChanged"]
+    assert "Операцію додано" in response.content.decode()
     tx = home.transactions.get()
     assert tx.amount == Decimal("486.50")
     assert tx.member == yura
@@ -79,7 +84,7 @@ def test_edit_changes_amount_and_category(yura_client, silpo, home_subs):
         payload(account=silpo.account_id, category=home_subs.pk, amount="500"),
     )
 
-    assert response.status_code == 204
+    assert response["HX-Reswap"] == "none"
     silpo.refresh_from_db()
     assert silpo.amount == Decimal("500")
     assert silpo.amount_base == Decimal("500")
@@ -89,8 +94,7 @@ def test_edit_changes_amount_and_category(yura_client, silpo, home_subs):
 def test_delete_and_undo(yura_client, home, silpo):
     response = yura_client.post(reverse("money:transaction_delete", args=[silpo.pk]))
 
-    assert response.status_code == 204
-    assert json.loads(response["HX-Trigger"])["showToast"]["undo"] == reverse("money:transaction_undo")
+    assert reverse("money:transaction_undo") in response.content.decode()
     assert not home.transactions.exists()
 
     yura_client.post(reverse("money:transaction_undo"))
@@ -118,4 +122,17 @@ def test_cannot_use_category_of_other_family(yura_client, home, mono, user):
     response = yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=foreign.pk))
 
     assert response.status_code == 200
+    assert not home.transactions.exists()
+
+
+def test_today_and_yesterday_shortcuts(yura_client, home, mono, food):
+    yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=food.pk, when="yesterday"))
+
+    assert home.transactions.get().date == timezone.localdate() - datetime.timedelta(days=1)
+
+
+def test_category_of_other_type_is_rejected(yura_client, home, mono, salary):
+    response = yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=salary.pk))
+
+    assert "Оберіть категорію." in response.content.decode()
     assert not home.transactions.exists()

@@ -1,5 +1,5 @@
 {% load i18n money %}
-<form class="tx-form" data-tx-form data-type="{{ form.type.value|default:'expense' }}" novalidate
+<form class="tx-form" novalidate
       hx-post="{% if transaction %}{% url 'money:transaction_edit' transaction.pk %}{% else %}{% url 'money:transaction_create' %}{% endif %}"
       hx-target="#tx-dialog-body">
   {% csrf_token %}
@@ -16,8 +16,8 @@
     <div class="field-cf{% if form.amount.errors %} has-error{% endif %}">
       <label class="amount-field">
         <input class="amount-input num" type="text" name="amount" value="{{ form.amount.value|default_if_none:'' }}"
-               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума' %}"{% if not transaction %} data-autofocus{% endif %}>
-        <span class="amount-cur" data-currency-symbol></span>
+               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума' %}"{% if not transaction %} autofocus{% endif %}>
+        <span class="amount-cur"></span>
       </label>
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
@@ -71,13 +71,11 @@
     <fieldset class="field-cf">
       <legend class="f-label">{% translate "Дата" %}</legend>
       <div class="pill-row">
-        <button class="pill-cf" type="button" data-date-shortcut="0">{% translate "Сьогодні" %}</button>
-        <button class="pill-cf" type="button" data-date-shortcut="1">{% translate "Вчора" %}</button>
-        <button class="pill-cf date-pill" type="button" data-date-picker>
-          <c-icon name="calendar" /><span data-date-label data-placeholder="{% translate 'Інша дата' %}">{% translate "Інша дата" %}</span>
-          {{ form.date }}
-        </button>
+        {% for radio in form.when %}
+          <label class="pill-cf">{{ radio.tag }}{% if radio.data.value == "other" %}<c-icon name="calendar" />{% endif %}{{ radio.choice_label }}</label>
+        {% endfor %}
       </div>
+      <div class="date-other">{{ form.date }}</div>
       {% for error in form.date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </fieldset>
 

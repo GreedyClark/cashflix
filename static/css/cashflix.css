@@ -2689,11 +2689,30 @@ a.bar-col:hover i {
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
-.tx-form[data-type="expense"] .cat-tile[data-kind="income"],
-.tx-form[data-type="income"] .cat-tile[data-kind="expense"],
-.tx-form[data-type="transfer"] [data-show="expense income"],
-.tx-form:not([data-type="transfer"]) [data-show="transfer"] {
+/* show only what fits the selected operation type */
+.tx-form:has([name="type"][value="expense"]:checked) .cat-tile[data-kind="income"],
+.tx-form:has([name="type"][value="income"]:checked) .cat-tile[data-kind="expense"],
+.tx-form:has([name="type"][value="transfer"]:checked) [data-show="expense income"],
+.tx-form:not(:has([name="type"][value="transfer"]:checked)) [data-show="transfer"],
+.tx-form:not(:has([name="when"][value="other"]:checked)) .date-other {
   display: none;
+}
+
+.amount-cur::before {
+  content: "₴";
+}
+
+.tx-form:has([name="account"][data-currency="USD"]:checked) .amount-cur::before {
+  content: "$";
+}
+
+.tx-form:has([name="account"][data-currency="EUR"]:checked) .amount-cur::before {
+  content: "€";
+}
+
+.date-other {
+  margin-top: 4px;
+  max-width: 220px;
 }
 
 .pill-row {
@@ -2739,22 +2758,10 @@ a.bar-col:hover i {
   font-size: 11px;
 }
 
-.pill-cf:has(input:checked),
-.pill-cf.is-on {
+.pill-cf:has(input:checked) {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
   background: var(--accent-soft);
   color: var(--ink);
-}
-
-.tx-form .date-pill input[type="date"] {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .f-meta {
@@ -2817,7 +2824,19 @@ a.bar-col:hover i {
   font-weight: 500;
   white-space: nowrap;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
-  animation: toast-in 0.25s ease-out;
+  animation: toast-in 0.25s ease-out, toast-out 0.3s ease-in 2.6s forwards;
+}
+
+.toast-cf.long {
+  animation: toast-in 0.25s ease-out, toast-out 0.3s ease-in 6s forwards;
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+  }
 }
 
 .toast-action {

@@ -1,0 +1,7 @@
+{% load i18n %}
+<div class="toast-zone" id="toast-zone" aria-live="polite" hx-swap-oob="true">
+  <div class="toast-cf{% if undo_url %} long{% endif %}">
+    <span>{{ message }}</span>
+    {% if undo_url %}<button class="toast-action" type="button" hx-post="{{ undo_url }}" hx-swap="none">{% translate "Повернути" %}</button>{% endif %}
+  </div>
+</div>
