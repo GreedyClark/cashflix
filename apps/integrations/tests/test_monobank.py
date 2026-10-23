@@ -208,3 +208,30 @@ def test_disconnect_keeps_transactions(client, home, yura, mono, connection, ban
 
     assert not MonobankAccount.objects.exists()
     assert home.transactions.count() == 1
+
+
+def test_link_can_create_account(client, home, yura, bank):
+    client.force_login(yura.user)
+    client.post(reverse("integrations:monobank_connect"), {"mono_token": "good"})
+    connection = MonobankConnection.objects.get(membership=yura)
+    black = connection.accounts.get(mono_id="black")
+    jar = connection.accounts.get(mono_id="jar1")
+
+    client.post(reverse("integrations:monobank_links"), {f"link_{black.pk}": "new", f"link_{jar.pk}": "new"})
+
+    black.refresh_from_db()
+    jar.refresh_from_db()
+    assert (black.account.name, black.account.kind, black.account.owner) == ("Monobank Чорна", "card", yura)
+    assert (jar.account.name, jar.account.kind) == ("Відпустка", "savings")
+
+
+def test_created_account_name_is_unique(client, home, yura, bank):
+    Account.objects.create(household=home, name="Monobank Чорна")
+    client.force_login(yura.user)
+    client.post(reverse("integrations:monobank_connect"), {"mono_token": "good"})
+    black = MonobankConnection.objects.get(membership=yura).accounts.get(mono_id="black")
+
+    client.post(reverse("integrations:monobank_links"), {f"link_{black.pk}": "new"})
+
+    black.refresh_from_db()
+    assert black.account.name == "Monobank Чорна 2"

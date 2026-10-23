@@ -16,6 +16,20 @@ from .models import MonobankAccount, MonobankConnection, ShortcutToken
 from .sync import connect, refresh_accounts, sync_account
 
 SKIP = ""
+NEW = "new"
+
+
+def create_account_for(item, membership):
+    kind = Account.Kind.SAVINGS if item.is_jar else Account.Kind.CARD
+    name = item.suggested_name
+    existing = set(membership.household.accounts.values_list("name", flat=True))
+    number = 2
+    while name in existing:
+        name = f"{item.suggested_name} {number}"
+        number += 1
+    return Account.objects.create(
+        household=membership.household, name=name, kind=kind, currency=item.currency, owner=membership
+    )
 
 
 class DefaultAccountForm(forms.ModelForm):
@@ -56,6 +70,7 @@ def connections(request):
         "endpoint": request.build_absolute_uri(reverse("integrations:shortcut_api")),
         "connection": connection,
         "mono_accounts": mono_accounts,
+        "shortcut_accounts": usable_accounts(request.household),
     }
     return render(request, "integrations/connections.html", context)
 
@@ -117,10 +132,15 @@ def monobank_links(request):
     accounts = {str(a.pk): a for a in usable_accounts(request.household)}
     chosen = {}
     for item in connection.accounts.all():
-        account = accounts.get(request.POST.get(f"link_{item.pk}", SKIP))
+        value = request.POST.get(f"link_{item.pk}", SKIP)
+        if value == NEW:
+            chosen[item.pk] = NEW
+            continue
+        account = accounts.get(value)
         if account and account.currency == item.currency:
             chosen[item.pk] = account
-    if len({a.pk for a in chosen.values()}) != len(chosen):
+    picked = [account.pk for account in chosen.values() if account != NEW]
+    if len(set(picked)) != len(picked):
         messages.error(request, _("Один рахунок CashFlix можна прив'язати лише до однієї картки Monobank."))
         return redirect("integrations:connections")
     try:
@@ -128,7 +148,8 @@ def monobank_links(request):
             connection.accounts.update(account=None)
             for item in connection.accounts.all():
                 if item.pk in chosen:
-                    item.account = chosen[item.pk]
+                    account = chosen[item.pk]
+                    item.account = create_account_for(item, request.membership) if account == NEW else account
                     item.save(update_fields=["account"])
     except IntegrityError:
         messages.error(request, _("Цей рахунок уже прив'язаний до Monobank іншого учасника."))

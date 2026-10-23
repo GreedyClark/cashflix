@@ -4712,7 +4712,7 @@ a.bar-col:hover i {
 
 .mono-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 220px) 104px;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr) 104px;
   align-items: center;
   gap: 10px;
   padding: 8px 0;
@@ -5027,4 +5027,39 @@ a.bar-col:hover i {
   .ai-msg {
     max-width: 90%;
   }
+}
+
+.mono-choices {
+  gap: 6px;
+}
+
+.mono-choices .pill-cf {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.pill-cf.pill-new {
+  border-style: dashed;
+}
+
+select {
+  appearance: none;
+  min-height: 38px;
+  padding: 0 34px 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6l6 -6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  color-scheme: light;
+}
+
+[data-bs-theme="dark"] select {
+  color-scheme: dark;
+}
+
+select option {
+  background: var(--surface-1);
+  color: var(--ink);
 }

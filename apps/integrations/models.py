@@ -123,3 +123,9 @@ class MonobankAccount(models.Model):
 
     def __str__(self):
         return self.title
+
+    @property
+    def suggested_name(self):
+        if self.is_jar:
+            return self.title.split("«", 1)[-1].rstrip("»") or self.title
+        return f"Monobank {self.title.split(' ·· ')[0]}"

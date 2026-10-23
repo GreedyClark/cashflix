@@ -41,11 +41,14 @@
 
         <form class="conn-form" method="post">
           {% csrf_token %}
-          <label class="f-label" for="{{ form.account.id_for_label }}">{% translate "Рахунок, якщо картку не впізнано" %}</label>
-          <div class="conn-row">
-            {{ form.account }}
-            <button class="btn-cf" type="submit">{% translate "Зберегти" %}</button>
+          <span class="f-label">{% translate "Рахунок, якщо картку не впізнано" %}</span>
+          <div class="pill-row">
+            <label class="pill-cf"><input type="radio" name="account" value=""{% if not token.account_id %} checked{% endif %}>{% translate "Моя основна картка" %}</label>
+            {% for account in shortcut_accounts %}
+              <label class="pill-cf"><input type="radio" name="account" value="{{ account.pk }}"{% if token.account_id == account.pk %} checked{% endif %}><c-icon :name="account.icon" />{{ account.name }}</label>
+            {% endfor %}
           </div>
+          <div class="conn-actions"><button class="btn-cf sm" type="submit">{% translate "Зберегти" %}</button></div>
           <p class="field-help">{% translate "Назва картки з Wallet порівнюється з назвами рахунків. Назвіть рахунок як картку, наприклад «Монобанк», і операція потрапить куди треба." %}</p>
         </form>
 
@@ -89,7 +92,7 @@
         </li>
         <li>{% blocktranslate %}За бажанням: «Отримати значення словника» <code>message</code> → «Показати сповіщення». Побачите, що записалось і в яку категорію.{% endblocktranslate %}</li>
       </ol>
-      <p class="field-help">{% translate "Поки сайт працює лише на вашому комп'ютері, iPhone до нього не достукається. Шорткат запрацює після деплою, а перевірити ендпоінт можна запитом із самого комп'ютера." %}</p>
+      {% if not request.is_secure %}<p class="field-help">{% translate "Поки сайт працює лише на вашому комп'ютері, iPhone до нього не достукається. Шорткат запрацює після деплою, а перевірити ендпоінт можна запитом із самого комп'ютера." %}</p>{% endif %}
     </section>
 
     <section class="panel conn-card" id="monobank">
@@ -111,12 +114,13 @@
                 <c-icon name="{% if item.is_jar %}pig-money{% else %}credit-card{% endif %}" />{{ item.title }}
                 {% if item.account and item.synced_until %}<span class="bud-hint">{% blocktranslate with date=item.synced_until|date:"j E, H:i" %}оновлено {{ date }}{% endblocktranslate %}</span>{% endif %}
               </span>
-              <select name="link_{{ item.pk }}" aria-label="{% blocktranslate with name=item.title %}Рахунок для {{ name }}{% endblocktranslate %}">
-                <option value="">{% translate "Не записувати" %}</option>
+              <div class="pill-row mono-choices" role="radiogroup" aria-label="{% blocktranslate with name=item.title %}Рахунок для {{ name }}{% endblocktranslate %}">
+                <label class="pill-cf"><input type="radio" name="link_{{ item.pk }}" value=""{% if not item.account_id %} checked{% endif %}>{% translate "Не записувати" %}</label>
                 {% for account in item.choices %}
-                  <option value="{{ account.pk }}"{% if item.account_id == account.pk %} selected{% endif %}>{{ account.name }}</option>
+                  <label class="pill-cf"><input type="radio" name="link_{{ item.pk }}" value="{{ account.pk }}"{% if item.account_id == account.pk %} checked{% endif %}><c-icon :name="account.icon" />{{ account.name }}</label>
                 {% endfor %}
-              </select>
+                <label class="pill-cf pill-new"><input type="radio" name="link_{{ item.pk }}" value="new"><c-icon name="plus" />{% blocktranslate with name=item.suggested_name %}Створити «{{ name }}»{% endblocktranslate %}</label>
+              </div>
               {% if item.account %}
                 <button class="btn-cf sm" type="submit" form="sync-{{ item.pk }}"><c-icon name="repeat" />{% translate "Оновити" %}</button>
               {% else %}
