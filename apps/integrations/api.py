@@ -13,7 +13,7 @@ from apps.money.rates import RateNotFound
 
 from .models import MonobankAccount, MonobankConnection, ShortcutToken
 from .parsing import BadPayload, match_account, parse_amount, parse_moment
-from .sync import process_item
+from .sync import minor, process_item, reconcile
 
 MESSAGES = {
     "amount": "Не вдалося прочитати суму.",
@@ -134,6 +134,10 @@ def monobank_webhook(request, secret):
     try:
         with db_transaction.atomic():
             status = process_item(mono_account, item)
+            if item.get("balance") is not None:
+                mono_account.balance = minor(item["balance"])
+                mono_account.save(update_fields=["balance"])
+                reconcile(mono_account, mono_account.balance)
     except RateNotFound:
         return JsonResponse({"status": "error"})
     return JsonResponse({"status": status})

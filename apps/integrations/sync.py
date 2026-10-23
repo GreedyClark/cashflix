@@ -6,7 +6,7 @@ from django.db import transaction as db_transaction
 from django.utils import timezone
 
 from apps.money.ingest import DUPLICATE, ingest
-from apps.money.models import Transaction
+from apps.money.models import Account, Transaction
 
 from . import monobank
 from .models import MonobankAccount, MonobankConnection
@@ -33,17 +33,37 @@ def card_title(item):
     return f"{CARD_NAMES.get(item.get('type'), 'Картка')}{tail} {currency}".strip()
 
 
+def minor(value):
+    return None if value is None else (Decimal(value) / 100).quantize(Decimal("0.01"))
+
+
+def reconcile(mono_account, bank_balance):
+    if bank_balance is None or mono_account.account_id is None:
+        return
+    account = Account.objects.with_balance().get(pk=mono_account.account_id)
+    difference = bank_balance - account.balance
+    if difference:
+        Account.objects.filter(pk=account.pk).update(opening_balance=account.opening_balance + difference)
+
+
 def refresh_accounts(connection, info):
-    rows = [(item["id"], False, card_title(item), item.get("currencyCode")) for item in info.get("accounts", [])]
-    rows += [(item["id"], True, f"Банка «{item.get('title', '')}»", item.get("currencyCode")) for item in info.get("jars", [])]
-    for mono_id, is_jar, title, code in rows:
+    rows = [(item, False, card_title(item)) for item in info.get("accounts", [])]
+    rows += [(item, True, f"Банка «{item.get('title', '')}»") for item in info.get("jars", [])]
+    for item, is_jar, title in rows:
+        code = item.get("currencyCode")
         if code not in monobank.CURRENCIES:
             continue
-        MonobankAccount.objects.update_or_create(
+        mono_account, _created = MonobankAccount.objects.update_or_create(
             connection=connection,
-            mono_id=mono_id,
-            defaults={"is_jar": is_jar, "title": title, "currency": monobank.CURRENCIES[code]},
+            mono_id=item["id"],
+            defaults={
+                "is_jar": is_jar,
+                "title": title,
+                "currency": monobank.CURRENCIES[code],
+                "balance": minor(item.get("balance")),
+            },
         )
+        reconcile(mono_account, mono_account.balance)
 
 
 def connect(membership, token):
@@ -146,9 +166,13 @@ def sync_account(mono_account, now=None):
     items = monobank.statement(connection.token, mono_account.mono_id, since.timestamp(), now.timestamp())
 
     results = Counter()
+    ordered = sorted(items, key=lambda row: row["time"])
     with db_transaction.atomic():
-        for item in sorted(items, key=lambda row: row["time"]):
+        for item in ordered:
             results[process_item(mono_account, item)] += 1
         mono_account.synced_until = now
-        mono_account.save(update_fields=["synced_until"])
+        if ordered and ordered[-1].get("balance") is not None:
+            mono_account.balance = minor(ordered[-1]["balance"])
+        mono_account.save(update_fields=["synced_until", "balance"])
+        reconcile(mono_account, mono_account.balance)
     return results

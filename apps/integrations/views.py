@@ -13,7 +13,7 @@ from apps.money.models import Account
 
 from . import monobank
 from .models import MonobankAccount, MonobankConnection, ShortcutToken
-from .sync import connect, refresh_accounts, sync_account
+from .sync import connect, reconcile, refresh_accounts, sync_account
 
 SKIP = ""
 NEW = "new"
@@ -151,6 +151,7 @@ def monobank_links(request):
                     account = chosen[item.pk]
                     item.account = create_account_for(item, request.membership) if account == NEW else account
                     item.save(update_fields=["account"])
+                    reconcile(item, item.balance)
     except IntegrityError:
         messages.error(request, _("Цей рахунок уже прив'язаний до Monobank іншого учасника."))
         return redirect("integrations:connections")

@@ -103,6 +103,7 @@ class MonobankAccount(models.Model):
     is_jar = models.BooleanField(default=False)
     title = models.CharField(_("назва"), max_length=120)
     currency = models.CharField(_("валюта"), max_length=3)
+    balance = models.DecimalField(_("залишок у банку"), max_digits=14, decimal_places=2, null=True, blank=True)
     account = models.OneToOneField(
         Account,
         on_delete=models.SET_NULL,

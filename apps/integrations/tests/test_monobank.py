@@ -235,3 +235,50 @@ def test_created_account_name_is_unique(client, home, yura, bank):
 
     black.refresh_from_db()
     assert black.account.name == "Monobank Чорна 2"
+
+
+def balance_of(account):
+    return Account.objects.with_balance().get(pk=account.pk).balance
+
+
+def test_sync_matches_bank_balance(home, mono, connection, bank):
+    first = item("a1", -10000)
+    second = item("a2", -5000, minutes=5)
+    first["balance"], second["balance"] = 1250000, 1245000
+    bank["black"] = [second, first]
+    card = link(connection, "black", mono)
+
+    sync_account(card, NOW)
+
+    assert balance_of(mono) == Decimal("12450.00")
+    mono.refresh_from_db()
+    assert mono.opening_balance == Decimal("12600.00")
+
+
+def test_linking_uses_client_info_balance(client, home, yura, mono, monkeypatch):
+    def fake(token, path, payload=None):
+        return {"name": "Юрій", "accounts": [{"id": "black", "currencyCode": 980, "type": "black", "maskedPan": ["1234"], "balance": 777700}]}
+
+    monkeypatch.setattr(monobank, "request", fake)
+    client.force_login(yura.user)
+    client.post(reverse("integrations:monobank_connect"), {"mono_token": "good"})
+    card = MonobankConnection.objects.get(membership=yura).accounts.get()
+
+    client.post(reverse("integrations:monobank_links"), {f"link_{card.pk}": mono.pk})
+
+    assert balance_of(mono) == Decimal("7777.00")
+
+
+def test_webhook_keeps_balance_in_sync(client, home, mono, connection, bank):
+    card = link(connection, "black", mono)
+    connection.webhook_secret = "hook"
+    connection.save()
+    payload = {"type": "StatementItem", "data": {"account": "black", "statementItem": {
+        "id": "w9", "time": int(NOW.timestamp()), "amount": -2000, "description": "Кава", "mcc": 5814, "balance": 98000,
+    }}}
+
+    client.post(reverse("integrations:monobank_webhook", args=["hook"]), payload, content_type="application/json")
+
+    assert balance_of(mono) == Decimal("980.00")
+    card.refresh_from_db()
+    assert card.balance == Decimal("980.00")
