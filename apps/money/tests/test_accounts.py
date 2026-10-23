@@ -212,3 +212,36 @@ def test_transfer_form_prefilled_from_link(yura_client, mono):
 
     assert form["type"].value() == "transfer"
     assert str(form["account"].value()) == str(mono.pk)
+
+
+def test_delete_only_empty_account(yura_client, home, mono, cash, food):
+    Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("10"), title="x", date=DAY)
+
+    yura_client.post(reverse("money:account_delete", args=[mono.pk]))
+    yura_client.post(reverse("money:account_delete", args=[cash.pk]))
+
+    assert home.accounts.filter(pk=mono.pk).exists()
+    assert not home.accounts.filter(pk=cash.pk).exists()
+
+
+def test_transfer_target_cannot_be_deleted(yura_client, home, mono, cash):
+    Transaction.objects.create(household=home, type="transfer", account=mono, to_account=cash, amount=Decimal("10"), title="x", date=DAY)
+
+    yura_client.post(reverse("money:account_delete", args=[cash.pk]))
+
+    assert home.accounts.filter(pk=cash.pk).exists()
+
+
+def test_page_marks_deletable_accounts(yura_client, home, mono, cash, food):
+    Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("10"), title="x", date=DAY)
+
+    accounts = {a.name: a.can_delete for a in yura_client.get(reverse("money:accounts")).context["accounts"]}
+
+    assert accounts == {"Монобанк": False, "Готівка": True}
+
+
+def test_foreign_account_delete_is_404(yura_client, user):
+    stranger = create_household(user, "Чужий дім")
+    foreign = Account.objects.create(household=stranger, name="Чужа")
+
+    assert yura_client.post(reverse("money:account_delete", args=[foreign.pk])).status_code == 404

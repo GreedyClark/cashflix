@@ -172,8 +172,10 @@ def account_list(request):
     accounts = load_accounts(household, today, archived=archived)
 
     month_start = today.replace(day=1)
+    used = used_account_ids(household)
     for index, account in enumerate(accounts):
         account.tone = tone_for(index)
+        account.can_delete = account.pk not in used
         account.received, account.spent = month_flow(account, month_start, today)
 
     active = accounts if not archived else []
@@ -228,6 +230,22 @@ def account_archive(request, pk):
     account.save(update_fields=["is_archived"])
     message = _("Рахунок перенесено в архів") if account.is_archived else _("Рахунок повернуто з архіву")
     return toast_response(request, message, events=ACCOUNTS_CHANGED)
+
+
+def used_account_ids(household):
+    used = set(household.transactions.values_list("account_id", flat=True))
+    used |= set(household.transactions.exclude(to_account=None).values_list("to_account_id", flat=True))
+    used |= set(household.recurring_payments.values_list("account_id", flat=True))
+    return used
+
+
+@require_POST
+def account_delete(request, pk):
+    account = get_object_or_404(request.household.accounts, pk=pk)
+    if account.pk in used_account_ids(request.household):
+        return toast_response(request, _("По рахунку є операції або регулярні платежі, його можна лише сховати в архів"))
+    account.delete()
+    return toast_response(request, _("Рахунок видалено"), events=ACCOUNTS_CHANGED)
 
 
 def valuation_create(request, pk):

@@ -24,6 +24,9 @@
           <button class="menu-item" type="button" hx-get="{% url 'money:transaction_create' %}?type=transfer&account={{ account.pk }}" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Переказ звідси" %}</button>
         {% endif %}
         <button class="menu-item" type="button" hx-post="{% url 'money:account_archive' account.pk %}" hx-swap="none"><c-icon name="archive" />{% if account.is_archived %}{% translate "Повернути з архіву" %}{% else %}{% translate "В архів" %}{% endif %}</button>
+        {% if account.can_delete %}
+          <button class="menu-item danger" type="button" hx-post="{% url 'money:account_delete' account.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+        {% endif %}
       </div>
     </details>
   </div>
