@@ -1,16 +1,12 @@
-import calendar
-from datetime import timedelta
 from decimal import Decimal
 
 from django.db.models import Sum
-from django.db.models.functions import TruncMonth
 from django.utils import dateformat
 
 from apps.budgets.summary import BudgetMonth
 from apps.core.templatetags.money import money
 from apps.goals.services import goal_items
 from apps.money.models import Transaction
-from apps.recurring.dates import add_months
 from apps.recurring.services import monthly_amount
 
 ZERO = Decimal("0")
@@ -22,33 +18,29 @@ def line(label, value):
 
 
 def months_block(household, today, currency):
-    start = add_months(today.replace(day=1), -(MONTHS - 1))
-    rows = (
-        household.transactions.filter(date__gte=start, date__lte=today)
-        .exclude(type=Transaction.Type.TRANSFER)
-        .annotate(period=TruncMonth("date"))
-        .values("period", "type")
-        .annotate(total=Sum("amount_base"))
-    )
-    totals = {(row["period"], row["type"]): row["total"] for row in rows}
-    lines = ["Доходи й витрати по місяцях:"]
-    for offset in range(MONTHS):
-        month = add_months(start, offset)
-        earned = totals.get((month, Transaction.Type.INCOME), ZERO)
-        spent = totals.get((month, Transaction.Type.EXPENSE), ZERO)
-        suffix = f" (поточний, день {today.day} з {calendar.monthrange(today.year, today.month)[1]})" if month.month == today.month and month.year == today.year else ""
-        lines.append(line(f"{dateformat.format(month, 'F Y')}{suffix}", f"дохід {money(earned, currency)}, витрати {money(spent, currency)}"))
+    current = household.period(today)
+    lines = ["Доходи й витрати по бюджетних місяцях:"]
+    if not current.is_calendar:
+        lines[0] = f"Бюджетний місяць у сім'ї починається {household.month_start_day}-го числа. Доходи й витрати по бюджетних місяцях:"
+    for offset in range(-(MONTHS - 1), 1):
+        period = current.shift(offset)
+        until = min(period.end, today)
+        income_start, income_end = period.income_range()
+        earned = household.transactions.incomes().between(income_start, min(income_end, today)).total_base()
+        spent = household.transactions.expenses().between(period.start, until).total_base()
+        suffix = f" (поточний, день {period.day_number(today)} з {period.days})" if offset == 0 else ""
+        lines.append(line(f"{period.label}{suffix}", f"дохід {money(earned, currency)}, витрати {money(spent, currency)}"))
     return lines
 
 
 def categories_block(household, today, currency):
-    month = today.replace(day=1)
-    previous = add_months(month, -1)
-    lines = ["Витрати по категоріях, цей місяць (минулий місяць повністю):"]
-    current = by_category(household, month, today)
-    before = by_category(household, previous, month - timedelta(days=1))
-    for name in sorted(set(current) | set(before), key=lambda key: current.get(key, ZERO), reverse=True):
-        lines.append(line(name, f"{money(current.get(name, ZERO), currency)} ({money(before.get(name, ZERO), currency)})"))
+    current = household.period(today)
+    previous = current.previous()
+    lines = ["Витрати по категоріях, цей бюджетний місяць (минулий повністю):"]
+    now = by_category(household, current.start, today)
+    before = by_category(household, previous.start, previous.end)
+    for name in sorted(set(now) | set(before), key=lambda key: now.get(key, ZERO), reverse=True):
+        lines.append(line(name, f"{money(now.get(name, ZERO), currency)} ({money(before.get(name, ZERO), currency)})"))
     return lines
 
 
@@ -61,17 +53,22 @@ def by_category(household, start, end):
 
 
 def limits_block(household, today, currency):
-    budget = BudgetMonth(household, today.replace(day=1), today)
+    budget = BudgetMonth(household, household.period(today), today)
     limits = budget.limits()
+    family = budget.income.family
+    lines = [f"Дохід цього бюджетного місяця: прийшло {money(family.received, currency)}, ще очікується {money(family.expected, currency)}."]
     if not limits:
-        return ["Лімітів немає."]
-    lines = [f"Ліміти на цей місяць (минуло {budget.pace}% місяця):"]
+        return lines + ["Лімітів немає."]
+    lines.append(f"Ліміти на цей місяць (минуло {budget.pace}% місяця):")
     for item in limits:
         limit = item["limit"]
         who = "спільний" if limit.is_shared else "особистий"
+        size = money(item["amount"], currency)
+        if limit.is_percent:
+            size += f" ({limit.percent.normalize()}% доходу, з усім доходом буде {money(item['full'], currency)})"
         lines.append(line(
             f"{limit.category.name} ({who})",
-            f"ліміт {money(limit.amount, currency)}, витрачено {money(item['spent'], currency)} ({item['percent']}%)",
+            f"ліміт {size}, витрачено {money(item['spent'], currency)} ({item['percent']}%)",
         ))
     return lines
 

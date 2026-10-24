@@ -2,7 +2,7 @@
 {% with currency=request.household.base_currency %}
 <div class="page-head">
   <div>
-    <p class="eyebrow">{% blocktranslate with month=today|date:"F Y" day=today.day days=days_in_month %}{{ month }} · день {{ day }} з {{ days }}{% endblocktranslate %}</p>
+    <p class="eyebrow">{% blocktranslate with month=period.label %}{{ month }} · день {{ day }} з {{ days_in_month }}{% endblocktranslate %}</p>
     <h1 class="page-title">{% translate "Огляд" %}</h1>
   </div>
   <div class="page-actions">
@@ -31,7 +31,7 @@
       {% if kpis.earned_change %}<span class="delta {% if kpis.earned_change > 0 %}good{% else %}bad{% endif %}">{% if kpis.earned_change > 0 %}↑{% else %}↓{% endif %} {{ kpis.earned_change|absolute }}%</span>{% endif %}
     </div>
     <div class="kpi-value num">{{ kpis.earned|money:currency }}</div>
-    <div class="kpi-note">{% blocktranslate with month=today|date:"F"|lower %}за {{ month }}{% endblocktranslate %}</div>
+    <div class="kpi-note">{{ period.since }}</div>
     <div class="kpi-spark" data-chart="earned"></div>
   </section>
   <section class="panel kpi">
@@ -40,7 +40,7 @@
       {% if kpis.spent_change %}<span class="delta {% if kpis.spent_change > 0 %}bad{% else %}good{% endif %}">{% if kpis.spent_change > 0 %}↑{% else %}↓{% endif %} {{ kpis.spent_change|absolute }}%</span>{% endif %}
     </div>
     <div class="kpi-value num">{{ kpis.spent|money:currency }}</div>
-    <div class="kpi-note">{% blocktranslate with month=today|date:"F"|lower %}за {{ month }}{% endblocktranslate %}</div>
+    <div class="kpi-note">{{ period.since }}</div>
     <div class="kpi-spark" data-chart="spent"></div>
   </section>
   <section class="panel kpi">
@@ -70,7 +70,7 @@
     <input class="range-input" type="radio" name="range" id="range-half">
     <header class="panel-head">
       <div>
-        <h2 class="panel-title range-month">{% blocktranslate with month=today|date:"F"|lower %}Витрати за {{ month }}{% endblocktranslate %}</h2>
+        <h2 class="panel-title range-month">{% blocktranslate with since=period.since %}Витрати {{ since }}{% endblocktranslate %}</h2>
         <h2 class="panel-title range-half">{% translate "Дохід і витрати" %}</h2>
         <p class="panel-sub range-month">{% translate "наростаючим підсумком" %}</p>
         <p class="panel-sub range-half">{% translate "останні 6 місяців" %}</p>
@@ -89,7 +89,7 @@
           <span class="hero-sub">{% translate "прогноз на місяць" %} <b class="num">{{ spending.forecast|money:currency }}</b></span>
         </div>
         <div class="chart-legend">
-          <span><i class="sw sw-current"></i>{{ today|date:"F" }}</span>
+          <span><i class="sw sw-current"></i>{% if period.is_calendar %}{{ today|date:"F" }}{% else %}{% translate "Цей місяць" %}{% endif %}</span>
           <span><i class="sw sw-forecast"></i>{% translate "Прогноз" %}</span>
           <span><i class="sw sw-previous"></i>{% translate "Минулий місяць" %}</span>
           <span><i class="sw sw-income"></i>{% translate "Дохід місяця" %}</span>
@@ -133,7 +133,7 @@
       <div>
         <dt>{% translate "Найкращий місяць" %}</dt>
         <dd class="num">{{ half_year.best_saved|money:currency }}</dd>
-        {% if half_year.best_month %}<dd class="mini-sub">{{ half_year.best_month|date:"F"|lower }} — {% translate "лишилось" %}</dd>{% endif %}
+        {% if half_year.best_month %}<dd class="mini-sub">{{ half_year.best_month.name }} — {% translate "лишилось" %}</dd>{% endif %}
       </div>
       <div><dt>{% translate "Цей місяць, поки що" %}</dt><dd class="num">{{ spending.room|money:currency }}</dd><dd class="mini-sub">{% translate "лишається" %}</dd></div>
       <div><dt>{% translate "За пів року відкладено" %}</dt><dd class="num">{{ half_year.total_saved|money:currency }}</dd></div>
@@ -143,7 +143,7 @@
   <section class="panel">
     <header class="panel-head">
       <div><h2 class="panel-title">{% translate "Куди йдуть гроші" %}</h2></div>
-      <span class="panel-actions panel-sub">{% blocktranslate with month=today|date:"F"|lower %}{{ month }} · до минулого{% endblocktranslate %}</span>
+      <span class="panel-actions panel-sub">{% blocktranslate with month=period.name %}{{ month }} · до минулого{% endblocktranslate %}</span>
     </header>
     <div class="panel-body">
       {% if categories %}

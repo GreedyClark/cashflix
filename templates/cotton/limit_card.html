@@ -10,7 +10,9 @@
         {% if item.state == "crit" %}{% blocktranslate with amount=item.over|money:currency %}перевищено на {{ amount }}{% endblocktranslate %}{% elif item.state == "warn" %}{% translate "майже вичерпано" %}{% else %}{% translate "у межах" %}{% endif %}
       </span>
     </span>
-    {% if limit.member %}
+    {% if limit.is_percent %}
+      <span class="lim-chip"><c-icon name="percentage" />{{ limit.percent|floatformat:"-2" }}% · {% if limit.member %}{{ limit.member.user.name }}{% else %}{% translate "сім'я" %}{% endif %}</span>
+    {% elif limit.member %}
       <span class="avatar-cf mini color-{{ limit.member.color_slot }}" title="{{ limit.member.user.name }}">{{ limit.member.user.initial }}</span>
     {% else %}
       <span class="acc-shared"><c-icon name="users" />{% translate "спільний" %}</span>
@@ -26,17 +28,18 @@
   </div>
   <div class="lim-nums num">
     <b>{{ item.spent|money:currency }}</b>
-    <span>{% blocktranslate with amount=limit.amount|money:currency %}з {{ amount }}{% endblocktranslate %}</span>
+    <span>{% blocktranslate with amount=item.amount|money:currency %}з {{ amount }}{% endblocktranslate %}</span>
     <em>{{ item.percent }}%</em>
   </div>
-  <div class="lim-bar"><i style="width: {{ item.bar }}%"></i>{% if item.pace is not None %}<s style="left: {{ item.pace }}%"></s>{% endif %}</div>
+  <div class="lim-bar{% if item.available is not None %} pct{% endif %}">{% if item.available is not None %}<span class="avail" style="width: {{ item.available }}%"></span>{% endif %}<i style="width: {{ item.bar }}%"></i>{% if item.pace is not None %}<s style="left: {{ item.pace }}%"></s>{% endif %}</div>
   <div class="lim-foot">
     {% if item.left >= 0 %}
       <span>{% blocktranslate with amount=item.left|money:currency %}лишилось {{ amount }}{% endblocktranslate %}</span>
     {% else %}
       <span class="bad">{% blocktranslate with amount=item.over|money:currency %}понад ліміт {{ amount }}{% endblocktranslate %}</span>
     {% endif %}
-    {% if item.average %}<span class="bud-hint">{% blocktranslate with amount=item.average|money:currency %}сер. за 3 міс. {{ amount }}{% endblocktranslate %}</span>{% endif %}
+    {% if item.grows %}<span class="lim-grow">{% blocktranslate with amount=item.grows|money:currency %}+{{ amount }} з наступним доходом{% endblocktranslate %}</span>
+    {% elif item.average %}<span class="bud-hint">{% blocktranslate with amount=item.average|money:currency %}сер. за 3 міс. {{ amount }}{% endblocktranslate %}</span>{% endif %}
   </div>
 </article>
 {% endwith %}

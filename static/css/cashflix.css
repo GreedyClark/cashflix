@@ -5553,3 +5553,215 @@ select option {
     display: none;
   }
 }
+
+/* Budget month income and percent limits */
+
+.inc-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 18px 20px;
+}
+
+.inc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inc-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.inc-total {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.inc-total small {
+  color: var(--ink-subtle);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.inc-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.inc-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.inc-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.inc-bar {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: repeating-linear-gradient(135deg, var(--surface-3) 0 6px, var(--surface-2) 6px 12px);
+}
+
+.inc-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: var(--good);
+}
+
+.inc-sum {
+  color: var(--ink-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.inc-sum b {
+  color: var(--ink);
+}
+
+.inc-parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  grid-column: 2 / 4;
+}
+
+.inc-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-subtle);
+  font-size: 12px;
+}
+
+.inc-part .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.inc-part.got {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+}
+
+.lim-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.lim-chip .icon {
+  width: 12px;
+  height: 12px;
+}
+
+.lim-bar.pct {
+  background: repeating-linear-gradient(135deg, var(--surface-3) 0 6px, var(--surface-2) 6px 12px);
+}
+
+.lim-bar .avail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--surface-3);
+}
+
+.lim-grow {
+  color: var(--accent-hover);
+  font-size: 12px;
+}
+
+.pct-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.pct-preview .bud-hint {
+  margin: 0;
+}
+
+.pct-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.pct-line span {
+  color: var(--ink-subtle);
+}
+
+.pct-line b {
+  font-weight: 600;
+}
+
+.limit-form:has([name="kind"][value="percent"]:checked) .only-amount,
+.limit-form:not(:has([name="kind"][value="percent"]:checked)) .only-percent {
+  display: none;
+}
+
+.set-person {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+@media (max-width: 640px) {
+  .inc-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .inc-row .inc-bar {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .inc-parts {
+    grid-column: 1 / 3;
+  }
+}
+
+.set-form,
+.set-list {
+  display: grid;
+  gap: 12px;
+}
+
+.day-input {
+  width: 80px;
+  height: 34px;
+  padding: 0 10px;
+}
+
+#budget-month:not(:has([value="other"]:checked)) .day-input {
+  display: none;
+}

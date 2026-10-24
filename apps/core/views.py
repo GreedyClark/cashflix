@@ -28,6 +28,8 @@ def home(request):
         "member": member,
         "members": household.memberships.active().select_related("user"),
         "today": overview.today,
+        "period": overview.period,
+        "day": overview.day,
         "days_in_month": overview.days_in_month,
         "kpis": overview.kpis(),
         "spending": spending,

@@ -5,12 +5,13 @@ import pytest
 from django.urls import reverse
 
 from apps.budgets.models import Limit
+from apps.budgets.periods import Period
 from apps.budgets.summary import BudgetMonth, SpendingHistory
 from apps.households.services import create_household
 from apps.money.icon_catalog import search, suggest
 from apps.money.models import Category, Transaction
 
-MONTH = datetime.date(2026, 10, 1)
+MONTH = Period.containing(datetime.date(2026, 10, 1))
 TODAY = datetime.date(2026, 10, 22)
 
 

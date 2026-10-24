@@ -1,6 +1,5 @@
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, render
-from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
@@ -27,7 +26,7 @@ def category_stats(household, month):
 def category_list(request):
     household = request.household
     archived = request.GET.get("archived") == "1"
-    stats = category_stats(household, timezone.localdate().replace(day=1))
+    stats = category_stats(household, household.period().start)
     categories = (
         household.categories.filter(is_archived=archived)
         .annotate(limit_count=Count("limits", distinct=True), payment_count=Count("recurring_payments", distinct=True))

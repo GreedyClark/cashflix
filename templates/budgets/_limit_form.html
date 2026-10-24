@@ -44,7 +44,11 @@
       </div>
     {% endif %}
 
-    <div class="field-cf{% if form.amount.errors %} has-error{% endif %}">
+    <div class="seg-cf full limit-kind" role="radiogroup" aria-label="{% translate 'Тип ліміту' %}">
+      {% for radio in form.kind %}<label>{{ radio.tag }}<span>{{ radio.choice_label }}</span></label>{% endfor %}
+    </div>
+
+    <div class="field-cf only-amount{% if form.amount.errors %} has-error{% endif %}">
       <label class="amount-field">
         {% include "budgets/_amount_input.html" %}
         <span class="amount-cur static">{% translate "₴ / міс." %}</span>
@@ -52,6 +56,17 @@
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
       <div id="limit-hints" hx-get="{% url 'budgets:limit_hints' %}" hx-trigger="load, change from:closest form"
            hx-include="[name=category]:checked, [name=category][type=hidden], [name=member]:checked" hx-target="this"></div>
+    </div>
+
+    <div class="field-cf only-percent{% if form.percent.errors %} has-error{% endif %}">
+      <label class="amount-field">
+        <input class="amount-input num" type="text" name="percent" value="{{ form.percent.value|default_if_none:'' }}"
+               inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Відсоток доходу' %}">
+        <span class="amount-cur static">{% translate "% доходу" %}</span>
+      </label>
+      {% for error in form.percent.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <div id="percent-preview" hx-get="{% url 'budgets:limit_preview' %}" hx-trigger="load, input changed delay:300ms from:closest form, change from:closest form"
+           hx-include="[name=percent], [name=category]:checked, [name=category][type=hidden], [name=member]:checked" hx-target="this"></div>
     </div>
 
     <fieldset class="field-cf">
@@ -68,7 +83,7 @@
           <span class="avatar-cf mini color-shared">С</span>{% translate "Спільний" %}
         </label>
       </div>
-      <p class="field-help">{% translate "Спільний ліміт рахує витрати всієї сім'ї, особистий — тільки цієї людини." %}</p>
+      <p class="field-help">{% translate "Спільний ліміт рахує витрати всієї сім'ї, особистий — тільки цієї людини." %}<span class="only-percent"> {% translate "У відсотках: спільний — від доходу сім'ї, особистий — від доходу цієї людини." %}</span></p>
     </fieldset>
   </div>
 

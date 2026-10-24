@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django import forms
 from django.utils.translation import gettext_lazy as _
 
@@ -11,13 +13,18 @@ NEW = "new"
 
 
 class LimitForm(forms.ModelForm):
+    AMOUNT, PERCENT = "amount", "percent"
+    KINDS = [(AMOUNT, _("Сума")), (PERCENT, _("% доходу"))]
+
     category = forms.CharField(required=False)
-    amount = AmountField(label=_("Сума на місяць"), min_value=1)
+    kind = forms.ChoiceField(choices=KINDS, widget=forms.RadioSelect, required=False)
+    amount = AmountField(label=_("Сума на місяць"), min_value=1, required=False)
+    percent = AmountField(label=_("Відсоток доходу"), min_value=Decimal("0.01"), max_value=100, required=False)
     member = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
 
     class Meta:
         model = Limit
-        fields = ["amount", "member"]
+        fields = ["amount", "percent", "member"]
 
     def __init__(self, data=None, *args, household, **kwargs):
         super().__init__(data, *args, **kwargs)
@@ -26,8 +33,12 @@ class LimitForm(forms.ModelForm):
         self.fields["member"].queryset = household.memberships.active().select_related("user")
         self.categories = household.categories.filter(kind=Category.Kind.EXPENSE, is_archived=False)
         self.category_form = CategoryForm(data, household=household, kind=Category.Kind.EXPENSE)
+        self.initial.setdefault("kind", self.PERCENT if self.instance.is_percent else self.AMOUNT)
         if self.instance.pk:
-            self.initial["amount"] = format_amount(self.instance.amount)
+            if self.instance.amount:
+                self.initial["amount"] = format_amount(self.instance.amount)
+            if self.instance.percent:
+                self.initial["percent"] = format_amount(self.instance.percent)
             self.fields["category"].disabled = True
             self.initial["category"] = self.instance.category_id
 
@@ -43,8 +54,20 @@ class LimitForm(forms.ModelForm):
         selected = str(self["member"].value() or "")
         return [{"object": m, "checked": str(m.pk) == selected} for m in self.fields["member"].queryset]
 
+    @property
+    def is_percent(self):
+        return self["kind"].value() == self.PERCENT
+
     def clean(self):
         cleaned = super().clean()
+        if cleaned.get("kind") == self.PERCENT:
+            cleaned["amount"] = None
+            if not cleaned.get("percent") and "percent" not in self.errors:
+                self.add_error("percent", _("Вкажіть відсоток від 0,01 до 100."))
+        else:
+            cleaned["percent"] = None
+            if not cleaned.get("amount") and "amount" not in self.errors:
+                self.add_error("amount", _("Вкажіть суму на місяць."))
         if self.instance.pk:
             self.category = self.instance.category
         elif cleaned.get("category") == NEW:

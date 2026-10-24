@@ -2,18 +2,47 @@
 {% with currency=request.household.base_currency %}
 <nav class="month-nav" aria-label="{% translate 'Місяць' %}">
   <a class="icon-btn" href="?month={{ previous_month }}" hx-get="?month={{ previous_month }}" hx-target="#budget" hx-push-url="true" aria-label="{% translate 'Попередній місяць' %}"><c-icon name="chevron-left" /></a>
-  <span class="month-label">{{ month|date:"F Y" }}</span>
+  <span class="month-label">{{ period.label }}</span>
   {% if next_month %}
     <a class="icon-btn" href="?month={{ next_month }}" hx-get="?month={{ next_month }}" hx-target="#budget" hx-push-url="true" aria-label="{% translate 'Наступний місяць' %}"><c-icon name="chevron-right" /></a>
   {% endif %}
 </nav>
 
+{% if income.family.total %}
+  <section class="panel inc-panel">
+    <div class="inc-head">
+      <h2>{% translate "Дохід бюджетного місяця" %}</h2>
+      <div class="inc-total num">{{ income.family.received|money:currency }}{% if income.family.expected %} <small>{% blocktranslate with amount=income.family.total|money:currency %}з ≈ {{ amount }} очікуваних{% endblocktranslate %}</small>{% endif %}</div>
+    </div>
+    <div class="inc-rows">
+      {% for person in people %}{% if person.total %}
+        <div class="inc-row">
+          <span class="inc-who"><span class="avatar-cf mini color-{{ person.membership.color_slot }}">{{ person.membership.user.initial }}</span>{{ person.membership.user.name }}</span>
+          <div class="inc-bar"><i style="width: {{ person.percent }}%"></i></div>
+          <span class="inc-sum num"><b>{{ person.received|money:currency }}</b>{% if person.expected %} {% blocktranslate with amount=person.total|money:currency %}з {{ amount }}{% endblocktranslate %}{% endif %}</span>
+          <div class="inc-parts">
+            {% for part in person.parts %}
+              <span class="inc-part{% if part.received %} got{% endif %}"><c-icon name="{% if part.received %}check{% else %}clock{% endif %}" />{{ part.date|date:"j E" }} · {% if not part.received %}≈ {% endif %}{{ part.amount|money:currency }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}{% endfor %}
+    </div>
+    {% if has_percent and next_income %}
+      <p class="bud-note">{% blocktranslate with date=next_income|date:"j E" %}Ліміти у відсотках рахуються від того, що вже прийшло. {{ date }}, коли прийде наступна частина, вони виростуть самі.{% endblocktranslate %}</p>
+    {% elif has_percent %}
+      <p class="bud-note">{% translate "Ліміти у відсотках рахуються від доходу, що вже прийшов цього місяця." %}</p>
+    {% endif %}
+  </section>
+{% endif %}
+
 {% if limits %}
   <section class="panel bud-sum">
     <div class="bud-kpis">
       <div>
-        <p class="eyebrow">{% translate "Заплановано" %}</p>
+        <p class="eyebrow">{% if summary.full %}{% translate "Заплановано зараз" %}{% else %}{% translate "Заплановано" %}{% endif %}</p>
         <div class="bud-value num">{{ summary.planned|money:currency }}</div>
+        {% if summary.full %}<span class="bud-hint">{% blocktranslate with amount=summary.full|money:currency %}стане {{ amount }}, коли прийде весь дохід{% endblocktranslate %}</span>{% endif %}
       </div>
       <div>
         <p class="eyebrow">{% translate "Витрачено" %}</p>

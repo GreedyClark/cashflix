@@ -96,9 +96,10 @@ function spendingOptions(data) {
     labels: Object.assign(axisLabels(), {
       rotate: 0,
       formatter: function (day) {
+        var tick = data.ticks ? data.ticks[day - 1] : day;
         if (day == data.today) return "сьогодні";
-        if (day == 1 || day == data.days) return day;
-        return day % 7 === 0 && Math.abs(day - data.today) > 3 ? day : "";
+        if (day == 1 || day == data.days) return tick;
+        return day % 7 === 0 && Math.abs(day - data.today) > 3 ? tick : "";
       },
     }),
   };
@@ -120,7 +121,7 @@ function spendingOptions(data) {
   }
   options.tooltip.shared = true;
   options.tooltip.intersect = false;
-  options.tooltip.x = { formatter: function (day) { return day + " " + data.month; } };
+  options.tooltip.x = { formatter: function (day) { return data.titles[day - 1]; } };
   options.tooltip.y = {
     formatter: function (value, point) {
       if (value === null) return undefined;

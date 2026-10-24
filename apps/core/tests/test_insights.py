@@ -59,13 +59,20 @@ def test_limit_runs_out_before_month_end(home, mono, food):
     assert "25 жовтня" in found[0].text
 
 
-def test_biggest_expense_only_when_notable(home, mono, food):
+def test_biggest_expense_names_category(home, mono, food, home_subs):
     add(home, mono, food, "100", datetime.date(2026, 10, 3))
-    add(home, mono, food, "9000", datetime.date(2026, 10, 4), title="Пральна машина")
+    add(home, mono, food, "200", datetime.date(2026, 10, 3))
+    add(home, mono, home_subs, "9000", datetime.date(2026, 10, 4), title="Magazin")
 
     found = insights(home).biggest()
 
-    assert "Пральна машина" in found[0].text
+    assert "«Підписки»" in found[0].text and "Magazin" not in found[0].text
+
+
+def test_biggest_expense_needs_a_few_expenses(home, mono, food):
+    add(home, mono, food, "200", datetime.date(2026, 10, 3), title="Magazin")
+
+    assert insights(home).biggest() == []
 
 
 def test_overview_shows_at_most_four(client, yura, home, mono, food, salary):

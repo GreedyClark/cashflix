@@ -1,0 +1,17 @@
+{% load i18n money %}
+<div class="pct-preview">
+  {% if percent %}
+    <div class="pct-line"><span>{% blocktranslate with amount=base.received|money %}Зараз (прийшло {{ amount }}){% endblocktranslate %}</span><b class="num">{{ now|money }}</b></div>
+    {% if base.expected %}
+      <div class="pct-line"><span>{% blocktranslate with amount=base.total|money %}Коли прийде все (≈ {{ amount }}){% endblocktranslate %}</span><b class="num">{{ full|money }}</b></div>
+    {% endif %}
+    {% if previous %}
+      <div class="pct-line"><span>{% translate "Минулого місяця витратили" %}</span><b class="num">{{ previous|money }}</b></div>
+    {% endif %}
+    {% if not base.received and not base.expected %}
+      <p class="bud-hint">{% translate "Доходу цього місяця ще немає. Ліміт з'явиться, щойно прийде зарплата, або додайте її як регулярний дохід." %}</p>
+    {% endif %}
+  {% else %}
+    <p class="bud-hint">{% blocktranslate with amount=base.received|money %}Цього місяця вже прийшло {{ amount }}. Вкажіть відсоток, і тут буде видно суму.{% endblocktranslate %}</p>
+  {% endif %}
+</div>

@@ -1,4 +1,3 @@
-import calendar
 import math
 from dataclasses import dataclass
 from datetime import timedelta
@@ -11,13 +10,13 @@ from django.utils.translation import gettext as _
 from django.utils.translation import gettext_lazy
 
 from apps.core.templatetags.money import money
-from apps.recurring.dates import add_months
 
 ZERO = Decimal("0")
 HISTORY_MONTHS = 3
 SPIKE = Decimal("1.3")
 DROP = Decimal("0.7")
 MIN_DIFFERENCE = Decimal("500")
+MIN_EXPENSES = 3
 WEEKDAYS = [
     gettext_lazy("понеділок"), gettext_lazy("вівторок"), gettext_lazy("середу"), gettext_lazy("четвер"),
     gettext_lazy("п'ятницю"), gettext_lazy("суботу"), gettext_lazy("неділю"),
@@ -49,9 +48,8 @@ class Insights:
     def usual_by_category(self):
         totals = {}
         for offset in range(1, HISTORY_MONTHS + 1):
-            month = add_months(self.overview.month, -offset)
-            last_day = min(self.today.day, calendar.monthrange(month.year, month.month)[1])
-            period = self.overview.transactions.between(month, month.replace(day=last_day)).expenses()
+            past = self.overview.period.shift(-offset)
+            period = self.overview.transactions.between(past.start, self.overview.same_days_of(past)).expenses()
             for category, total in by_category(period).items():
                 totals[category] = totals.get(category, ZERO) + total
         return {category: total / HISTORY_MONTHS for category, total in totals.items()}
@@ -91,11 +89,11 @@ class Insights:
         found = []
         days_left = self.overview.days_in_month - self.overview.day
         for item in self.overview.limits():
-            spent, limit = item["spent"], item["limit"]
-            if spent >= limit.amount or not spent or days_left <= 0:
+            spent, limit, amount = item["spent"], item["limit"], item["amount"]
+            if spent >= amount or not spent or days_left <= 0:
                 continue
             per_day = spent / self.overview.day
-            days_to_limit = math.ceil((limit.amount - spent) / per_day)
+            days_to_limit = math.ceil((amount - spent) / per_day)
             if days_to_limit < days_left:
                 date = self.today + timedelta(days=days_to_limit)
                 text = _("Ліміт на «%(name)s» за такого темпу закінчиться приблизно %(date)s.")
@@ -124,12 +122,16 @@ class Insights:
         return [Insight("info", "calendar", text % {"day": WEEKDAYS[weekday - 1], "amount": self.money(total / weeks)}, 30)]
 
     def biggest(self):
-        tx = self.overview.this_month.expenses().order_by("-amount_base").first()
-        if not tx or not self.overview.spent or tx.amount_base < self.overview.spent * Decimal("0.15"):
+        expenses = self.overview.this_month.expenses()
+        if expenses.count() < MIN_EXPENSES:
             return []
-        text = _("Найбільша витрата місяця: «%(title)s», %(amount)s. Це %(share)s%% усіх витрат.")
+        tx = expenses.select_related("category").order_by("-amount_base").first()
+        if not self.overview.spent or tx.amount_base < self.overview.spent * Decimal("0.15"):
+            return []
+        name = tx.category.name if tx.category else _("Без категорії")
+        text = _("Найбільша разова витрата місяця: %(amount)s на «%(name)s». Це %(share)s%% усіх витрат.")
         share = round(tx.amount_base / self.overview.spent * 100)
-        return [Insight("info", "receipt", text % {"title": tx.title, "amount": self.money(tx.amount_base), "share": share}, 40)]
+        return [Insight("info", "receipt", text % {"name": name, "amount": self.money(tx.amount_base), "share": share}, 40)]
 
     def all(self, count=4):
         found = self.limits() + self.forecast() + self.categories() + self.biggest() + self.weekday()

@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Case, DecimalField, OuterRef, Q, Subquery, Sum, Value, When
 from django.db.models.functions import Coalesce
@@ -53,7 +54,15 @@ class Limit(models.Model):
         verbose_name=_("для кого"),
         help_text=_("Порожньо — спільний ліміт на всю сім'ю"),
     )
-    amount = models.DecimalField(_("ліміт на місяць"), **MONEY)
+    amount = models.DecimalField(_("ліміт на місяць"), null=True, blank=True, **MONEY)
+    percent = models.DecimalField(
+        _("відсоток доходу"),
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("100"))],
+    )
     created_at = models.DateTimeField(_("створено"), auto_now_add=True)
 
     objects = LimitQuerySet.as_manager()
@@ -69,16 +78,24 @@ class Limit(models.Model):
             models.UniqueConstraint(
                 fields=["category", "member"], condition=Q(member__isnull=False), name="unique_personal_limit"
             ),
-            models.CheckConstraint(condition=Q(amount__gt=0), name="limit_amount_positive"),
+            models.CheckConstraint(
+                condition=Q(amount__gt=0, percent__isnull=True) | Q(amount__isnull=True, percent__gt=0),
+                name="limit_amount_or_percent",
+            ),
         ]
 
     def __str__(self):
         who = self.member.user.name if self.member_id else _("спільний")
-        return f"{self.category} ({who}): {self.amount}"
+        value = f"{self.percent}%" if self.is_percent else self.amount
+        return f"{self.category} ({who}): {value}"
 
     @property
     def is_shared(self):
         return self.member_id is None
+
+    @property
+    def is_percent(self):
+        return self.percent is not None
 
     def clean(self):
         errors = {}
@@ -98,9 +115,12 @@ class Limit(models.Model):
             expenses = expenses.filter(member=self.member)
         return expenses.total_base()
 
-    def state_for(self, spent):
-        if spent >= self.amount:
+    def state_for(self, spent, amount=None):
+        amount = self.amount if amount is None else amount
+        if not amount:
+            return self.State.CRIT if spent else self.State.OK
+        if spent >= amount:
             return self.State.CRIT
-        if spent >= self.amount * self.WARN_AT:
+        if spent >= amount * self.WARN_AT:
             return self.State.WARN
         return self.State.OK

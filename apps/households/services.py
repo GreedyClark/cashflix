@@ -68,7 +68,8 @@ def month_spending(household, today=None):
     from apps.money.models import Transaction
 
     today = today or timezone.localdate()
-    month_start = today.replace(day=1)
+    period = household.period(today)
+    month_start = period.start
     in_month = Q(transactions__type=Transaction.Type.EXPENSE, transactions__date__gte=month_start)
 
     memberships = list(
@@ -92,4 +93,5 @@ def month_spending(household, today=None):
         "segments": segments,
         "total": total,
         "month": month_start,
+        "period": period,
     }

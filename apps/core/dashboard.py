@@ -1,17 +1,15 @@
-import calendar
 from datetime import timedelta
 from decimal import Decimal
 from functools import cached_property
 
 from django.db.models import Q, Sum
-from django.db.models.functions import TruncMonth
-from django.utils import dateformat, timezone
+from django.utils import formats, timezone
 
+from apps.budgets.income import MonthIncome
 from apps.budgets.models import Limit
+from apps.budgets.summary import limit_item
 from apps.goals.services import goal_items
-from apps.money.models import Transaction
 from apps.money.accounts import load_accounts
-from apps.recurring.dates import add_months
 
 ZERO = Decimal("0")
 
@@ -40,14 +38,20 @@ def as_floats(values):
     return [None if value is None else float(value) for value in values]
 
 
+def incomes_of(transactions, period, until):
+    start, end = period.income_range()
+    return transactions.incomes().between(start, min(end, until))
+
+
 class Overview:
     def __init__(self, household, member=None, today=None):
         self.household = household
         self.member = member
         self.today = today or timezone.localdate()
-        self.month = self.today.replace(day=1)
-        self.days_in_month = calendar.monthrange(self.month.year, self.month.month)[1]
-        self.previous_month = add_months(self.month, -1)
+        self.period = household.period(self.today)
+        self.month = self.period.start
+        self.days_in_month = self.period.days
+        self.previous = self.period.previous()
 
         transactions = household.transactions.all()
         if member:
@@ -56,16 +60,24 @@ class Overview:
 
         self.this_month = transactions.between(self.month, self.today)
         self.spent = self.this_month.expenses().total_base()
-        self.earned = self.this_month.incomes().total_base()
+        self.earned = incomes_of(transactions, self.period, self.today).total_base()
         self.spent_by_day = by_day(self.this_month.expenses())
 
     @property
     def day(self):
-        return self.today.day
+        return self.period.day_number(self.today)
+
+    def same_days_of(self, period):
+        return min(period.start + timedelta(days=self.day - 1), period.end)
 
     def same_period_last_month(self):
-        last_day = min(self.day, calendar.monthrange(self.previous_month.year, self.previous_month.month)[1])
-        return self.transactions.between(self.previous_month, self.previous_month.replace(day=last_day))
+        return self.transactions.between(self.previous.start, self.same_days_of(self.previous))
+
+    def earned_last_month(self):
+        start = self.period.income_range()[0]
+        previous_start, previous_end = self.previous.income_range()
+        until = min(previous_start + (self.today - start), previous_end)
+        return self.transactions.incomes().between(previous_start, until).total_base()
 
     def kpis(self):
         before = self.same_period_last_month()
@@ -74,7 +86,7 @@ class Overview:
         return {
             "balance": self.total_balance,
             "earned": self.earned,
-            "earned_change": percent_change(self.earned, before.incomes().total_base()),
+            "earned_change": percent_change(self.earned, self.earned_last_month()),
             "spent": self.spent,
             "spent_change": percent_change(self.spent, before.expenses().total_base()),
             "savings": savings,
@@ -90,10 +102,9 @@ class Overview:
 
     def spending(self):
         current = running_total(self.spent_by_day, self.month, self.day)
-        previous_days = calendar.monthrange(self.previous_month.year, self.previous_month.month)[1]
-        previous_month_end = self.previous_month.replace(day=previous_days)
-        previous_by_day = by_day(self.transactions.between(self.previous_month, previous_month_end).expenses())
-        previous = running_total(previous_by_day, self.previous_month, previous_days)
+        previous_days = self.previous.days
+        previous_by_day = by_day(self.transactions.between(self.previous.start, self.previous.end).expenses())
+        previous = running_total(previous_by_day, self.previous.start, previous_days)
         previous = (previous + previous[-1:] * self.days_in_month)[: self.days_in_month]
 
         per_day = self.spent / self.day
@@ -118,32 +129,28 @@ class Overview:
                 "forecast": as_floats(forecast),
                 "previous": as_floats(previous),
                 "income": float(self.earned),
-                "month": dateformat.format(self.month, "E"),
+                "ticks": [day.day for day in self.period.dates()],
+                "titles": [formats.date_format(day, "j E") for day in self.period.dates()],
             },
         }
 
     def half_year(self):
-        months = [add_months(self.month, offset) for offset in range(-5, 1)]
-        rows = (
-            self.transactions.filter(date__gte=months[0], date__lte=self.today)
-            .exclude(type=Transaction.Type.TRANSFER)
-            .annotate(period=TruncMonth("date"))
-            .values("period", "type")
-            .annotate(total=Sum("amount_base"))
-        )
-        totals = {(row["period"], row["type"]): row["total"] for row in rows}
-        earned = [totals.get((m, Transaction.Type.INCOME), ZERO) for m in months]
-        spent = [totals.get((m, Transaction.Type.EXPENSE), ZERO) for m in months]
+        periods = [self.period.shift(offset) for offset in range(-5, 1)]
+        earned, spent = [], []
+        for period in periods:
+            until = min(period.end, self.today)
+            earned.append(incomes_of(self.transactions, period, until).total_base())
+            spent.append(self.transactions.between(period.start, until).expenses().total_base())
         saved = [e - s for e, s in zip(earned, spent)]
         finished = saved[:-1]
         best = max(range(len(finished)), key=lambda i: finished[i]) if finished else None
         return {
             "average_saved": sum(finished, ZERO) / len(finished) if finished else ZERO,
-            "best_month": months[best] if best is not None else None,
+            "best_month": periods[best] if best is not None else None,
             "best_saved": finished[best] if best is not None else ZERO,
             "total_saved": sum(saved, ZERO),
             "chart": {
-                "labels": [dateformat.format(m, "M") for m in months],
+                "labels": [period.chart_label for period in periods],
                 "earned": as_floats(earned),
                 "spent": as_floats(spent),
                 "savings": [round(float(s / e * 100)) if e else 0 for s, e in zip(saved, earned)],
@@ -166,20 +173,11 @@ class Overview:
         return items
 
     def limits(self):
-        month_end = self.month.replace(day=self.days_in_month)
         limits = Limit.objects.filter(household=self.household).select_related("category", "member__user")
         if self.member:
             limits = limits.filter(Q(member__isnull=True) | Q(member=self.member))
-        result = []
-        for limit in limits.with_spent(self.month, month_end):
-            result.append({
-                "limit": limit,
-                "spent": limit.spent,
-                "left": limit.amount - limit.spent,
-                "percent": min(100, round(limit.spent / limit.amount * 100)),
-                "state": limit.state_for(limit.spent),
-            })
-        return result
+        income = MonthIncome(self.household, self.period, self.today)
+        return [limit_item(limit, limit.spent, income) for limit in limits.with_spent(self.period.start, self.period.end)]
 
     def pace(self):
         return round(self.day / self.days_in_month * 100)

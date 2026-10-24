@@ -2,9 +2,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
+
+from apps.budgets.income import counted_categories
+from apps.money.models import Category
 
 from .forms import HouseholdForm
 from .middleware import SESSION_KEY
@@ -30,8 +34,13 @@ def onboarding(request):
 def members(request):
     household = request.household
     invitation = household.invitations.active().first()
+    start_days = [1, 5, 10, 15, 20, 25]
     context = {
         **month_spending(household),
+        "start_days": start_days,
+        "custom_day": household.month_start_day if household.month_start_day not in start_days else None,
+        "current_period": household.period(),
+        "income_rows": income_rows(household, request.membership),
         "invitation": invitation,
         "invite_url": request.build_absolute_uri(invitation.get_absolute_url()) if invitation else "",
         "is_owner": request.membership.is_owner,
@@ -119,3 +128,43 @@ def join(request, token):
         return redirect("core:home")
 
     return render(request, "households/join_confirm.html", context)
+
+
+def income_rows(household, current):
+    categories = list(household.categories.filter(kind=Category.Kind.INCOME, is_archived=False))
+    rows = []
+    for membership in household.memberships.active().select_related("user"):
+        chosen = counted_categories(household, membership)
+        rows.append({
+            "membership": membership,
+            "mine": membership.pk == current.pk,
+            "options": [{"category": c, "checked": c.pk in chosen} for c in categories],
+        })
+    return rows
+
+
+@require_POST
+def month_start(request):
+    owner_required(request)
+    value = request.POST.get("day")
+    if value == "other":
+        value = request.POST.get("other_day")
+    try:
+        day = int(value)
+    except (TypeError, ValueError):
+        day = 0
+    if not 1 <= day <= 28:
+        messages.error(request, _("Оберіть число від 1 до 28."))
+    else:
+        request.household.month_start_day = day
+        request.household.save(update_fields=["month_start_day"])
+        messages.success(request, _("Бюджетний місяць тепер: %(label)s.") % {"label": request.household.period().label})
+    return redirect(reverse("households:members") + "#budget-month")
+
+
+@require_POST
+def income_categories(request):
+    allowed = request.household.categories.filter(kind=Category.Kind.INCOME, pk__in=request.POST.getlist("category"))
+    request.membership.income_categories.set(allowed)
+    messages.success(request, _("Збережено, що рахувати вашим доходом."))
+    return redirect(reverse("households:members") + "#income-categories")

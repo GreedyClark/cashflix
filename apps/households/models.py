@@ -2,6 +2,7 @@ import secrets
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
@@ -24,6 +25,11 @@ class Household(models.Model):
     base_currency = models.CharField(
         _("основна валюта"), max_length=3, choices=Currency.choices, default=Currency.UAH
     )
+    month_start_day = models.PositiveSmallIntegerField(
+        _("початок бюджетного місяця"),
+        default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(28)],
+    )
     created_at = models.DateTimeField(_("створено"), auto_now_add=True)
 
     objects = HouseholdQuerySet.as_manager()
@@ -34,6 +40,11 @@ class Household(models.Model):
 
     def __str__(self):
         return self.name
+
+    def period(self, day=None):
+        from apps.budgets.periods import Period
+
+        return Period.containing(day or timezone.localdate(), self.month_start_day)
 
 
 class MembershipQuerySet(models.QuerySet):
@@ -64,6 +75,9 @@ class Membership(models.Model):
     color_slot = models.PositiveSmallIntegerField(_("колір"), default=1)
     joined_at = models.DateTimeField(_("приєднався"), auto_now_add=True)
     left_at = models.DateTimeField(_("вийшов"), null=True, blank=True)
+    income_categories = models.ManyToManyField(
+        "money.Category", blank=True, related_name="+", verbose_name=_("що рахувати доходом")
+    )
 
     objects = MembershipQuerySet.as_manager()
 

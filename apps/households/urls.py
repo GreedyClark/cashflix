@@ -11,6 +11,8 @@ urlpatterns = [
     path("family/invitation/revoke/", views.invitation_revoke, name="invitation_revoke"),
     path("family/members/<int:pk>/remove/", views.member_remove, name="member_remove"),
     path("family/leave/", views.leave, name="leave"),
+    path("family/month/", views.month_start, name="month_start"),
+    path("family/income/", views.income_categories, name="income_categories"),
     path("family/<int:pk>/switch/", views.switch, name="switch"),
     path("join/<str:token>/", views.join, name="join"),
 ]
