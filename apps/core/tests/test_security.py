@@ -26,3 +26,9 @@ def test_other_family_data_is_404(client, yura, user):
         ("money:valuation_create", [account.pk]),
     ]:
         assert client.get(reverse(name, args=args)).status_code == 404
+
+
+def test_interface_stays_ukrainian_for_english_browser(client, yura):
+    client.force_login(yura.user)
+    response = client.get("/", headers={"Accept-Language": "en-US,en;q=0.9"})
+    assert response["Content-Language"] == "uk"

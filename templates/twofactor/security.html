@@ -17,8 +17,7 @@
         <div class="panel-body">
           <h2 class="panel-title">{% translate "Збережіть резервні коди" %}</h2>
           <p class="bud-hint">{% translate "Вони знадобляться, якщо телефон загубиться. Кожен код працює один раз. Більше ми їх не покажемо." %}</p>
-          <textarea class="codes-list num" id="backup-codes" rows="5" readonly aria-label="{% translate 'Резервні коди' %}">{{ new_codes|join:"
-" }}</textarea>
+          <textarea class="codes-list num" id="backup-codes" rows="5" readonly aria-label="{% translate 'Резервні коди' %}">{% for code in new_codes %}{{ code }}{% if not forloop.last %}&#10;{% endif %}{% endfor %}</textarea>
           <div class="conn-actions">
             <button class="btn-cf" type="button" data-copy="#backup-codes" data-copied="{% translate 'Скопійовано' %}"><c-icon name="copy" /><span>{% translate "Копіювати" %}</span></button>
           </div>

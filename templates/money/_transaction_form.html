@@ -36,7 +36,7 @@
     </div>
 
     <div class="field-cf{% if form.title.errors %} has-error{% endif %}">
-      <label class="f-label" for="{{ form.title.id_for_label }}">{% translate "Назва" %}</label>
+      <label class="f-label" for="{{ form.title.id_for_label }}">{% translate "Назва" %}<span class="only-income f-optional"> · {% translate "необов'язково" %}</span></label>
       {{ form.title }}
       {% for error in form.title.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
@@ -100,7 +100,7 @@
     </fieldset>
 
     <fieldset class="field-cf" data-show="expense income">
-      <legend class="f-label">{% translate "Хто платив" %}</legend>
+      <legend class="f-label"><span class="only-expense">{% translate "Хто платив" %}</span><span class="only-income">{% translate "Хто отримав" %}</span></legend>
       <div class="pill-row">
         {% for option in form.member_options %}
           <label class="pill-cf person">

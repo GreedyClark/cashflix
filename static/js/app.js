@@ -98,3 +98,57 @@ document.body.addEventListener("twofactorDone", function (event) {
     window.location.href = event.detail.url;
   }, 1100);
 });
+
+function startCarousels(root) {
+  var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  root.querySelectorAll("[data-carousel]").forEach(function (strip) {
+    var items = strip.children;
+    var dots = strip.parentElement.querySelectorAll(".carousel-dots i");
+    if (items.length < 2 || strip.dataset.started) {
+      return;
+    }
+    strip.dataset.started = "1";
+    var paused = false;
+
+    function step() {
+      return items[1].offsetLeft - items[0].offsetLeft;
+    }
+
+    function current() {
+      return Math.round(strip.scrollLeft / step());
+    }
+
+    strip.addEventListener("scroll", function () {
+      var index = current();
+      dots.forEach(function (dot, i) {
+        dot.classList.toggle("on", i === index);
+      });
+    }, { passive: true });
+
+    ["pointerdown", "touchstart", "wheel"].forEach(function (name) {
+      strip.addEventListener(name, function () {
+        paused = true;
+      }, { passive: true });
+    });
+
+    if (still) {
+      return;
+    }
+    var timer = setInterval(function () {
+      if (!document.body.contains(strip)) {
+        clearInterval(timer);
+        return;
+      }
+      if (paused || document.hidden || strip.scrollWidth <= strip.clientWidth) {
+        return;
+      }
+      var next = (current() + 1) % items.length;
+      strip.scrollTo({ left: next * step(), behavior: "smooth" });
+    }, 5000);
+  });
+}
+
+startCarousels(document);
+document.body.addEventListener("htmx:afterSwap", function (event) {
+  startCarousels(event.detail.target);
+});

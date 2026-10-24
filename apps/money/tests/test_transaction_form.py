@@ -136,3 +136,19 @@ def test_category_of_other_type_is_rejected(yura_client, home, mono, salary):
 
     assert "Оберіть категорію." in response.content.decode()
     assert not home.transactions.exists()
+
+
+def test_income_without_title_uses_category(yura_client, home, mono, salary, yura):
+    yura_client.post(
+        reverse("money:transaction_create"),
+        payload(type="income", account=mono.pk, category=salary.pk, member=yura.pk, title="", amount="30000"),
+    )
+
+    assert home.transactions.get().title == "Зарплата"
+
+
+def test_income_without_title_and_category_asks_for_one(yura_client, home, mono):
+    response = yura_client.post(reverse("money:transaction_create"), payload(type="income", account=mono.pk, title=""))
+
+    assert "Оберіть категорію або вкажіть назву." in response.content.decode()
+    assert not home.transactions.exists()

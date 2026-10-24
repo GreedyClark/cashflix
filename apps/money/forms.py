@@ -199,6 +199,7 @@ class TransactionForm(forms.ModelForm):
         self.fields["member"].queryset = household.memberships.active().select_related("user")
 
         self.fields["date"].required = False
+        self.fields["title"].required = False
 
         if self.instance.pk:
             self.initial["amount"] = format_amount(self.instance.amount)
@@ -226,6 +227,16 @@ class TransactionForm(forms.ModelForm):
         category = cleaned.get("category")
         if category and category.kind != cleaned.get("type"):
             cleaned["category"] = None
+            category = None
+
+        if cleaned.get("type") == Transaction.Type.INCOME and not cleaned.get("title"):
+            if category:
+                cleaned["title"] = category.name
+                self.errors.pop("title", None)
+            else:
+                self.add_error("category", _("Оберіть категорію або вкажіть назву."))
+        elif not cleaned.get("title") and "title" not in self.errors:
+            self.add_error("title", self.Meta.error_messages["title"]["required"])
 
         if cleaned.get("type") == Transaction.Type.TRANSFER:
             cleaned["category"] = None

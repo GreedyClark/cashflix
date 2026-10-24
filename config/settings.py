@@ -98,7 +98,6 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "uk"
 LANGUAGES = [
     ("uk", _("Українська")),
-    ("en", _("English")),
 ]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Europe/Kyiv"

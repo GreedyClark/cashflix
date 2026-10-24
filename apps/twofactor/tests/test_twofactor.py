@@ -157,8 +157,11 @@ def test_totp_setup_enables_and_shows_codes(client, user):
     assert response.url == reverse("twofactor:security")
     factor = SecondFactor.objects.get(user=user)
     assert factor.method == SecondFactor.Method.TOTP and factor.totp_secret == secret
-    page = client.get(reverse("twofactor:security")).content.decode()
+    response = client.get(reverse("twofactor:security"))
+    page = response.content.decode()
     assert "Збережіть резервні коди" in page
+    codes = page.split('id="backup-codes"')[1].split(">", 1)[1].split("</textarea>")[0].split("&#10;")
+    assert len(codes) == 10 and all(len(code) == 9 and code[4] == "-" for code in codes)
     assert BackupCode.left(user) == 10
 
 

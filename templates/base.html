@@ -46,17 +46,46 @@
       <header class="topbar">
         <a class="brand" href="{% url 'core:home' %}"><span class="brand-mark"><c-icon name="wallet" /></span>CashFlix</a>
         <div class="top-actions">
-          <button class="icon-btn" type="button" data-theme-toggle aria-label="{% translate 'Перемкнути тему' %}">
-            <span class="theme-icon-dark"><c-icon name="sun" /></span>
-            <span class="theme-icon-light"><c-icon name="moon" /></span>
-          </button>
           {% if user.is_authenticated %}
-            <a class="icon-btn" href="{% url 'twofactor:security' %}" aria-label="{% translate 'Безпека входу' %}" title="{% translate 'Безпека входу' %}"><c-icon name="shield-lock" /></a>
-            <a class="user-chip" href="{% url 'households:members' %}" title="{{ user.email }}"><span class="avatar-cf{% if request.membership %} color-{{ request.membership.color_slot }}{% endif %}">{{ user.initial }}</span><span class="user-name">{{ user.name }}</span></a>
-            <form method="post" action="{% url 'account_logout' %}">
-              {% csrf_token %}
-              <button class="icon-btn" type="submit" aria-label="{% translate 'Вийти' %}" title="{% translate 'Вийти' %}"><c-icon name="logout" /></button>
-            </form>
+            {% with method=user.second_factor.method %}
+            <details class="menu-cf user-menu">
+              <summary class="user-chip" aria-label="{% translate 'Меню користувача' %}">
+                <span class="avatar-cf{% if request.membership %} color-{{ request.membership.color_slot }}{% endif %}">{{ user.initial }}</span>
+                <span class="user-name">{{ user.name }}</span>
+                <c-icon name="chevron-down" />
+              </summary>
+              <div class="menu-pop user-pop">
+                <div class="user-card">
+                  <span class="avatar-cf big{% if request.membership %} color-{{ request.membership.color_slot }}{% endif %}">{{ user.initial }}</span>
+                  <div>
+                    <b>{{ user.name }}</b>
+                    <small>{{ user.email }}</small>
+                  </div>
+                </div>
+                <a class="menu-item" href="{% url 'households:members' %}"><c-icon name="users" />{% translate "Профіль і сім'я" %}</a>
+                <a class="menu-item" href="{% url 'twofactor:security' %}">
+                  <c-icon name="shield-lock" />{% translate "Безпека входу" %}
+                  {% if method == "telegram" %}<span class="menu-badge on">Telegram</span>
+                  {% elif method == "totp" %}<span class="menu-badge on">Authenticator</span>
+                  {% else %}<span class="menu-badge warn">{% translate "лише Google" %}</span>{% endif %}
+                </a>
+                <button class="menu-item" type="button" data-theme-toggle>
+                  <span class="theme-icon-dark"><c-icon name="sun" /></span><span class="theme-icon-light"><c-icon name="moon" /></span>
+                  <span class="theme-icon-dark">{% translate "Світла тема" %}</span><span class="theme-icon-light">{% translate "Темна тема" %}</span>
+                </button>
+                <hr class="menu-sep">
+                <form method="post" action="{% url 'account_logout' %}">
+                  {% csrf_token %}
+                  <button class="menu-item danger" type="submit"><c-icon name="logout" />{% translate "Вийти" %}</button>
+                </form>
+              </div>
+            </details>
+            {% endwith %}
+          {% else %}
+            <button class="icon-btn" type="button" data-theme-toggle aria-label="{% translate 'Перемкнути тему' %}">
+              <span class="theme-icon-dark"><c-icon name="sun" /></span>
+              <span class="theme-icon-light"><c-icon name="moon" /></span>
+            </button>
           {% endif %}
         </div>
       </header>

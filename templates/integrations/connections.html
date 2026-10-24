@@ -189,14 +189,24 @@
           </form>
         </div>
       {% else %}
+        <div class="mono-guide">
+          <div class="mono-guide-head">
+            <span class="mono-guide-num">1</span>
+            <div>
+              <b>{% translate "Отримайте токен у Monobank" %}</b>
+              <p class="bud-hint">{% translate "Відкрийте сайт банку, відскануйте QR-код застосунком Monobank і скопіюйте токен." %}</p>
+            </div>
+          </div>
+          <a class="btn-cf mono-guide-link" href="https://api.monobank.ua/" target="_blank" rel="noopener"><c-icon name="link" />{% translate "Відкрити api.monobank.ua" %}</a>
+          <p class="mono-guide-note"><c-icon name="lock" />{% translate "Токен дає лише перегляд виписки, переказувати гроші з ним не можна. У CashFlix він зберігається зашифрованим." %}</p>
+        </div>
         <form class="conn-form" method="post" action="{% url 'integrations:monobank_connect' %}">
           {% csrf_token %}
-          <label class="f-label" for="mono-token">{% translate "Особистий токен Monobank" %}</label>
+          <label class="f-label mono-step" for="mono-token"><span class="mono-guide-num">2</span>{% translate "Вставте токен сюди" %}</label>
           <div class="conn-row">
             <input type="password" name="mono_token" id="mono-token" autocomplete="off" placeholder="{% translate 'Вставте токен' %}">
             <button class="btn-cf primary" type="submit">{% translate "Підключити" %}</button>
           </div>
-          <p class="field-help">{% blocktranslate %}Токен видає сам банк на <a href="https://api.monobank.ua/" target="_blank" rel="noopener">api.monobank.ua</a>: увійдіть через застосунок і скопіюйте його. Токен дає лише перегляд виписки, переказувати гроші з ним не можна. У CashFlix він зберігається зашифрованим.{% endblocktranslate %}</p>
         </form>
       {% endif %}
     </section>
