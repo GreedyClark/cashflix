@@ -13,6 +13,9 @@ ENCRYPTION_KEY = env("ENCRYPTION_KEY", default="")
 GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-latest")
 CRON_SECRET = env("CRON_SECRET", default="")
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+VAPID_PUBLIC_KEY = env("VAPID_PUBLIC_KEY", default="")
+VAPID_PRIVATE_KEY = env("VAPID_PRIVATE_KEY", default="")
+VAPID_SUBJECT = env("VAPID_SUBJECT", default="mailto:admin@cashflix.local")
 ADMIN_URL = env("ADMIN_URL", default="admin/")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
@@ -43,6 +46,7 @@ INSTALLED_APPS = [
     "apps.integrations",
     "apps.assistant",
     "apps.twofactor",
+    "apps.notifications",
     "apps.core",
 ]
 

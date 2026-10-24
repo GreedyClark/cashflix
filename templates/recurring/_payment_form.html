@@ -21,6 +21,12 @@
         <span class="amount-cur"></span>
       </label>
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <div class="pill-row currency-row" role="radiogroup" aria-label="{% translate 'Валюта' %}">
+        {% for option in form.currency_options %}
+          <label class="pill-cf"><input type="radio" name="currency" value="{{ option.code }}"{% if option.checked %} checked{% endif %}>{% if option.code == "USD" %}${% elif option.code == "EUR" %}€{% else %}₴{% endif %} {{ option.code }}</label>
+        {% endfor %}
+      </div>
+      <p class="field-help only-foreign">{% translate "Сума у валюті, а спишеться з рахунку за курсом НБУ на день оплати." %}</p>
       <label class="check-cf">{{ form.is_approximate }}{% translate "Сума щоразу різна, вказую орієнтовно" %}</label>
     </div>
 
@@ -67,9 +73,28 @@
     <div class="field-cf{% if form.start_date.errors %} has-error{% endif %}">
       <label class="f-label" for="{{ form.start_date.id_for_label }}">{% translate "Перший платіж" %}</label>
       {{ form.start_date }}
-      <p class="field-help">{% translate "Від цієї дати рахується розклад. Операція створиться сама в день платежу." %}</p>
+      <p class="field-help">{% translate "Від цієї дати рахується розклад." %}</p>
       {% for error in form.start_date.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Як записувати" %}</legend>
+      <div class="pill-row">
+        {% for radio in form.mode %}<label class="pill-cf">{{ radio.tag }}<c-icon name="{% if radio.data.value == 'remind' %}hand-finger{% else %}repeat{% endif %}" />{{ radio.choice_label }}</label>{% endfor %}
+      </div>
+      <p class="field-help only-auto">{% translate "Операція створиться сама в день платежу." %}</p>
+      <p class="field-help only-remind">{% translate "Операція з'явиться, коли натиснете «Оплатив» на сайті чи в Telegram, з точною сумою." %}</p>
+    </fieldset>
+
+    <fieldset class="field-cf">
+      <legend class="f-label">{% translate "Нагадати" %}</legend>
+      <div class="pill-row">
+        {% for option in form.reminder_options %}
+          <label class="pill-cf"><input type="checkbox" name="reminders" value="{{ option.value }}"{% if option.checked %} checked{% endif %}>{{ option.label }}</label>
+        {% endfor %}
+      </div>
+      <p class="field-help">{% blocktranslate with url=notify_url %}Нічого не вибрано — без нагадувань. Куди і о котрій надсилати, налаштовується в <a href="{{ url }}">Сповіщеннях</a>.{% endblocktranslate %}</p>
+    </fieldset>
 
     <fieldset class="field-cf">
       <legend class="f-label">{% translate "Хто платить" %}</legend>

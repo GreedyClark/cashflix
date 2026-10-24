@@ -5,6 +5,7 @@
   <meta charset="utf-8">
   <meta name="htmx-config" content='{"allowEval": false}'>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  {% include "_pwa_head.html" %}
   <title>{% block title %}CashFlix{% endblock %}</title>
   <script src="{% static 'js/theme.js' %}"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -69,6 +70,7 @@
                   {% elif method == "totp" %}<span class="menu-badge on">Authenticator</span>
                   {% else %}<span class="menu-badge warn">{% translate "лише Google" %}</span>{% endif %}
                 </a>
+                <a class="menu-item" href="{% url 'notifications:settings' %}"><c-icon name="bell" />{% translate "Сповіщення" %}</a>
                 <button class="menu-item" type="button" data-theme-toggle>
                   <span class="theme-icon-dark"><c-icon name="sun" /></span><span class="theme-icon-light"><c-icon name="moon" /></span>
                   <span class="theme-icon-dark">{% translate "Світла тема" %}</span><span class="theme-icon-light">{% translate "Темна тема" %}</span>

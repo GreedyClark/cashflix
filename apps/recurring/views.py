@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
@@ -12,7 +13,6 @@ from apps.money.models import Transaction
 from apps.recurring.dates import add_months
 
 from .forms import PayForm, PaymentForm
-from .models import RecurringPayment
 from .services import in_base, monthly_amount, occurrences, pay_now
 
 CHANGED = ("paymentsChanged", "closeModal")
@@ -86,7 +86,8 @@ def payment_form(request, payment=None):
         form.save()
         message = _("Платіж додано") if payment is None else _("Зміни збережено")
         return toast_response(request, message, events=CHANGED)
-    return render(request, "recurring/_payment_form.html", {"form": form, "payment": payment})
+    context = {"form": form, "payment": payment, "notify_url": reverse("notifications:settings")}
+    return render(request, "recurring/_payment_form.html", context)
 
 
 def payment_create(request):

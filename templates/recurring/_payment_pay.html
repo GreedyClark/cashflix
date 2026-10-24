@@ -10,6 +10,7 @@
     <p class="panel-text">
       {% blocktranslate with date=payment.next_date|date:"j E" %}Створимо операцію зараз, а наступний платіж за розкладом перенесемо з {{ date }} на період уперед.{% endblocktranslate %}
       {% if payment.is_approximate %}{% translate "Сума орієнтовна, тож перевірте її." %}{% endif %}
+      {% if payment.is_foreign %}{% blocktranslate with amount=payment.amount|money:payment.pay_currency %}Платіж {{ amount }}, тут сума в валюті рахунку за курсом НБУ на сьогодні. Якщо банк списав інакше, виправте.{% endblocktranslate %}{% endif %}
     </p>
     <div class="field-cf{% if form.amount.errors %} has-error{% endif %}">
       <label class="amount-field">

@@ -33,10 +33,10 @@
             <span class="tx-icon tone-{{ payment.category.color_slot }}"><c-cat-icon :category="payment.category" /></span>
             <span class="cat-row-main">
               <span class="cat-row-name">{{ payment.title }}</span>
-              <span class="bud-hint">{{ payment.get_period_display|capfirst }} · {{ payment.account.name }} · {{ payment.category.name }}{% if payment.member %} · {{ payment.member.user.name }}{% endif %}</span>
+              <span class="bud-hint">{{ payment.get_period_display|capfirst }} · {{ payment.account.name }} · {{ payment.category.name }}{% if payment.member %} · {{ payment.member.user.name }}{% endif %}{% if payment.is_manual %} · <span class="pay-mode"><c-icon name="hand-finger" />{% translate "оплачу сам" %}</span>{% endif %}</span>
             </span>
             <span class="pay-side">
-              <span class="pay-amount num{% if payment.type == 'income' %} plus{% endif %}">{% if payment.is_approximate %}≈ {% endif %}{% if payment.type == 'income' %}+{% endif %}{{ payment.amount|money:payment.account.currency }}</span>
+              <span class="pay-amount num{% if payment.type == 'income' %} plus{% endif %}">{% if payment.is_approximate %}≈ {% endif %}{% if payment.type == 'income' %}+{% endif %}{{ payment.amount|money:payment.pay_currency }}</span>
               <span class="pay-when">
                 {% if not payment.is_active %}{% translate "на паузі" %}
                 {% elif payment.days_left < 0 %}{% blocktranslate with date=payment.next_date|date:"j E" %}мав бути {{ date }}{% endblocktranslate %}

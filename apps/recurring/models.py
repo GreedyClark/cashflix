@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -6,17 +7,28 @@ from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.households.models import Household, Membership
+from apps.households.models import Currency, Household, Membership
 from apps.money.models import MONEY, Account, Category, Transaction
+from apps.money.rates import convert_rate
 
 from .dates import add_months
 
 
+def default_reminders():
+    return [1, 0]
+
+
 class RecurringPayment(models.Model):
+    REMIND_CHOICES = [(7, _("За 7 днів")), (3, _("За 3 дні")), (1, _("За день")), (0, _("У день оплати"))]
+
     class Period(models.TextChoices):
         WEEKLY = "weekly", _("щотижня")
         MONTHLY = "monthly", _("щомісяця")
         YEARLY = "yearly", _("щороку")
+
+    class Mode(models.TextChoices):
+        AUTO = "auto", _("Автоматично")
+        REMIND = "remind", _("Нагадати, оплачу сам")
 
     household = models.ForeignKey(
         Household, on_delete=models.CASCADE, related_name="recurring_payments", verbose_name=_("сім'я")
@@ -29,6 +41,7 @@ class RecurringPayment(models.Model):
         default=Transaction.Type.EXPENSE,
     )
     amount = models.DecimalField(_("сума"), **MONEY)
+    currency = models.CharField(_("валюта"), max_length=3, choices=Currency.choices, blank=True)
     is_approximate = models.BooleanField(_("сума орієнтовна"), default=False)
     account = models.ForeignKey(
         Account, on_delete=models.PROTECT, related_name="recurring_payments", verbose_name=_("рахунок")
@@ -48,6 +61,9 @@ class RecurringPayment(models.Model):
     start_date = models.DateField(_("перший платіж"), default=timezone.localdate)
     next_date = models.DateField(_("наступний платіж"), blank=True)
     is_active = models.BooleanField(_("активний"), default=True)
+    mode = models.CharField(_("як записувати"), max_length=10, choices=Mode.choices, default=Mode.AUTO)
+    reminders = models.JSONField(_("нагадати"), default=default_reminders, blank=True)
+    remind_on = models.DateField(_("нагадати ще раз"), null=True, blank=True)
     created_at = models.DateTimeField(_("створено"), auto_now_add=True)
 
     class Meta:
@@ -87,14 +103,33 @@ class RecurringPayment(models.Model):
             return add_months(date, 12, day=self.start_date.day)
         return add_months(date, 1, day=self.start_date.day)
 
-    def make_transaction(self, date):
+    @property
+    def pay_currency(self):
+        return self.currency or self.account.currency
+
+    @property
+    def is_foreign(self):
+        return self.pay_currency != self.account.currency
+
+    @property
+    def is_manual(self):
+        return self.mode == self.Mode.REMIND
+
+    def account_amount(self, date, amount=None):
+        amount = self.amount if amount is None else amount
+        if not self.is_foreign:
+            return amount
+        rate = convert_rate(self.pay_currency, self.account.currency, date)
+        return (amount * rate).quantize(Decimal("0.01"))
+
+    def make_transaction(self, date, account_amount=None):
         return Transaction(
             household=self.household,
             type=self.type,
             date=date,
             title=self.title,
             account=self.account,
-            amount=self.amount,
+            amount=self.account_amount(date) if account_amount is None else account_amount,
             category=self.category,
             member=self.member,
             source=Transaction.Source.RECURRING,

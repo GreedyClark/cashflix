@@ -152,3 +152,72 @@ startCarousels(document);
 document.body.addEventListener("htmx:afterSwap", function (event) {
   startCarousels(event.detail.target);
 });
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(function () {});
+}
+
+function base64ToBytes(value) {
+  var padded = (value + "===".slice((value.length + 3) % 4)).replace(/-/g, "+").replace(/_/g, "/");
+  var raw = atob(padded);
+  var bytes = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) {
+    bytes[i] = raw.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function pushState(box, state) {
+  box.dataset.state = state;
+}
+
+document.querySelectorAll("[data-push]").forEach(function (box) {
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    pushState(box, ios && !standalone ? "install" : "unsupported");
+    return;
+  }
+  if (Notification.permission === "denied") {
+    pushState(box, "denied");
+    return;
+  }
+  navigator.serviceWorker.ready.then(function (registration) {
+    return registration.pushManager.getSubscription();
+  }).then(function (subscription) {
+    pushState(box, subscription ? "on" : "off");
+  });
+
+  box.querySelector("[data-push-enable]").addEventListener("click", function () {
+    pushState(box, "busy");
+    Notification.requestPermission().then(function (permission) {
+      if (permission !== "granted") {
+        pushState(box, "denied");
+        return null;
+      }
+      return navigator.serviceWorker.ready.then(function (registration) {
+        return registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64ToBytes(box.dataset.key),
+        });
+      });
+    }).then(function (subscription) {
+      if (!subscription) {
+        return;
+      }
+      return fetch(box.dataset.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRFToken": box.querySelector("[name=csrfmiddlewaretoken]").value },
+        body: JSON.stringify(subscription.toJSON()),
+      }).then(function (response) {
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          pushState(box, "error");
+        }
+      });
+    }).catch(function () {
+      pushState(box, "error");
+    });
+  });
+});

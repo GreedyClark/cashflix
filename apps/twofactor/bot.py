@@ -4,6 +4,7 @@ from . import telegram
 from .models import SecondFactor, TelegramRequest
 
 APPROVE = "ok"
+NOTIFY = "notify"
 DENY = "no"
 
 
@@ -19,7 +20,7 @@ def handle(update):
     if text.startswith("/start "):
         on_start(chat["id"], message.get("from") or {}, text.split(maxsplit=1)[1])
     else:
-        telegram.send(chat["id"], "Я надсилаю запити на вхід у CashFlix. Підключити мене можна на сторінці «Безпека входу».")
+        telegram.send(chat["id"], "Я надсилаю запити на вхід і нагадування про платежі CashFlix. Підключити мене можна на сторінці «Сповіщення».")
 
 
 def on_start(chat_id, sender, code):
@@ -33,11 +34,18 @@ def on_start(chat_id, sender, code):
     factor.save(update_fields=["telegram_chat_id", "telegram_username", "updated_at"])
     found.status = TelegramRequest.Status.APPROVED
     found.save(update_fields=["status"])
-    telegram.send(chat_id, "Готово ✅ Тепер вхід у CashFlix підтверджується тут.")
+    text = "Готово ✅ Тепер нагадування CashFlix приходитимуть сюди." if found.device == NOTIFY else "Готово ✅ Тепер вхід у CashFlix підтверджується тут."
+    telegram.send(chat_id, text)
 
 
 def on_button(query):
     action, _sep, code = (query.get("data") or "").partition(":")
+    if action not in (APPROVE, DENY):
+        from apps.notifications.actions import ACTIONS, handle_button
+
+        if action in ACTIONS:
+            handle_button(query)
+        return
     found = TelegramRequest.objects.filter(kind=TelegramRequest.Kind.LOGIN, code=code).first()
     sender = (query.get("from") or {}).get("id")
     factor = SecondFactor.objects.filter(user_id=found.user_id).first() if found else None

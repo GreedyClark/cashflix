@@ -132,9 +132,16 @@ def telegram_link(request):
     except telegram.TelegramError:
         messages.error(request, _("Telegram зараз недоступний. Спробуйте пізніше."))
         return redirect("twofactor:security")
-    link = TelegramRequest.start(request.user, TelegramRequest.Kind.LINK)
+    purpose = bot.NOTIFY if request.GET.get("for") == bot.NOTIFY else ""
+    link = TelegramRequest.start(request.user, TelegramRequest.Kind.LINK, purpose)
     request.session[LINK_KEY] = link.pk
-    return render(request, "twofactor/telegram_link.html", {"bot": username, "link": f"https://t.me/{username}?start={link.code}"})
+    context = {
+        "bot": username,
+        "link": f"https://t.me/{username}?start={link.code}",
+        "back": reverse("notifications:settings") if purpose else reverse("twofactor:security"),
+        "back_label": _("Сповіщення") if purpose else _("Безпека входу"),
+    }
+    return render(request, "twofactor/telegram_link.html", context)
 
 
 def telegram_link_status(request):
@@ -142,6 +149,9 @@ def telegram_link_status(request):
     found = TelegramRequest.objects.filter(pk=request.session.get(LINK_KEY), user=request.user).first()
     if found and found.status == TelegramRequest.Status.APPROVED:
         request.session.pop(LINK_KEY, None)
+        if found.device == bot.NOTIFY:
+            messages.success(request, _("Telegram підключено. Нагадування приходитимуть у бот."))
+            return hx_redirect(reverse("notifications:settings"))
         enable(request, SecondFactor.of(request.user), SecondFactor.Method.TELEGRAM)
         messages.success(request, _("Telegram підключено. Тепер вхід підтверджується в боті."))
         return hx_redirect(reverse("twofactor:security"))

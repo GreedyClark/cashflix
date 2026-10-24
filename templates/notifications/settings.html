@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Сповіщення" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ user.name }}</p>
+      <h1 class="page-title">{% translate "Сповіщення" %}</h1>
+    </div>
+  </div>
+
+  <div class="sec-page">
+    <section class="panel rise">
+      <div class="panel-body sec-body">
+        <div>
+          <h2 class="panel-title">{% translate "Куди надсилати" %}</h2>
+          <p class="bud-hint">{% translate "Нагадування про регулярні платежі. За скільки днів нагадувати, обирається в кожному платежі." %}</p>
+        </div>
+
+        <div class="chan">
+          <span class="tx-icon tone-1"><c-icon name="brand-telegram" /></span>
+          <div>
+            <b>Telegram</b>
+            <small>{% if factor.has_telegram %}{% if factor.telegram_username %}{% blocktranslate with name=factor.telegram_username %}Підключено до @{{ name }}{% endblocktranslate %}{% else %}{% translate "Підключено" %}{% endif %}{% elif telegram_ready %}{% translate "Бот надсилатиме нагадування з кнопкою «Оплатив»" %}{% else %}{% translate "Бот ще не налаштовано" %}{% endif %}</small>
+          </div>
+          {% if factor.has_telegram %}
+            <span class="conn-status{% if form.instance.telegram %} on{% endif %}">{% if form.instance.telegram %}{% translate "увімкнено" %}{% else %}{% translate "вимкнено" %}{% endif %}</span>
+          {% elif telegram_ready %}
+            <a class="btn-cf sm primary" href="{% url 'twofactor:telegram' %}?for=notify">{% translate "Підключити" %}</a>
+          {% endif %}
+        </div>
+
+        <div class="chan push-box" data-push data-state="loading" data-key="{{ vapid_key }}" data-url="{% url 'notifications:subscribe' %}">
+          {% csrf_token %}
+          <span class="tx-icon tone-4"><c-icon name="device-mobile" /></span>
+          <div>
+            <b>{% translate "Push на цьому пристрої" %}</b>
+            <small class="push-on">{% translate "Увімкнено на цьому пристрої" %}</small>
+            <small class="push-off">{% translate "Сповіщення прямо на телефон чи комп'ютер, без Telegram" %}</small>
+            <small class="push-install">{% translate "Спершу додайте CashFlix на головний екран (див. нижче)" %}</small>
+            <small class="push-denied">{% translate "Сповіщення заборонені в налаштуваннях браузера" %}</small>
+            <small class="push-unsupported">{% translate "Цей браузер не підтримує push" %}</small>
+            <small class="push-error">{% translate "Не вийшло увімкнути. Спробуйте ще раз." %}</small>
+          </div>
+          {% if push_ready %}
+            <button class="btn-cf sm primary push-button" type="button" data-push-enable>{% translate "Увімкнути" %}</button>
+            <span class="conn-status on push-on">{% translate "увімкнено" %}</span>
+          {% else %}
+            <span class="conn-status">{% translate "не налаштовано" %}</span>
+          {% endif %}
+        </div>
+
+        {% if subscriptions %}
+          <div class="sec-list">
+            {% for subscription in subscriptions %}
+              <div class="sec-row">
+                <span class="tx-icon tone-{% cycle 2 3 5 6 %}"><c-icon name="{% if 'iPhone' in subscription.label or 'Android' in subscription.label %}device-mobile{% else %}device-desktop{% endif %}" /></span>
+                <div><b>{{ subscription.label|default:_("Пристрій") }}</b><small>{% blocktranslate with date=subscription.created_at|date:"j E" %}push з {{ date }}{% endblocktranslate %}</small></div>
+                <form method="post" action="{% url 'notifications:unsubscribe' subscription.pk %}">{% csrf_token %}<button class="btn-cf sm" type="submit">{% translate "Відключити" %}</button></form>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <div class="ios-hint">
+          <c-icon name="device-mobile" />
+          <div>{% blocktranslate %}<b>На iPhone</b> push працює, коли CashFlix додано на головний екран: у Safari натисніть «Поділитися» → «На початковий екран», відкрийте CashFlix з іконки й поверніться сюди.{% endblocktranslate %}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel rise d1">
+      <form class="panel-body sec-body" method="post">
+        {% csrf_token %}
+        <div>
+          <h2 class="panel-title">{% translate "О котрій нагадувати" %}</h2>
+          <p class="bud-hint">{% translate "Один раз на день, усі нагадування разом." %}</p>
+        </div>
+        <div class="time-row">
+          {{ form.remind_at }}
+          {% if factor.has_telegram %}<label class="check-cf">{{ form.telegram }}{% translate "Надсилати в Telegram" %}</label>{% endif %}
+        </div>
+        {% for error in form.remind_at.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+        <div class="conn-actions">
+          <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel rise d2">
+      <div class="panel-body sec-body">
+        <div>
+          <h2 class="panel-title">{% translate "Сьогодні нагадаємо про" %}</h2>
+          {% if not upcoming %}<p class="bud-hint">{% translate "Сьогодні нагадувати нічого." %}</p>{% endif %}
+        </div>
+        {% if upcoming %}
+          <ul class="due-list">
+            {% for item in upcoming %}
+              <li><b>{{ item.when }}</b> · {{ item.payment.title }} — {{ item.amount }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <div class="conn-actions">
+          <form method="post" action="{% url 'notifications:test' %}">{% csrf_token %}<button class="btn-cf" type="submit">{% translate "Надіслати тестове" %}</button></form>
+          {% if upcoming %}<form method="post" action="{% url 'notifications:remind_now' %}">{% csrf_token %}<button class="btn-cf" type="submit">{% translate "Надіслати нагадування зараз" %}</button></form>{% endif %}
+        </div>
+      </div>
+    </section>
+  </div>
+{% endblock %}

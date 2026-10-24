@@ -4528,7 +4528,7 @@ a.bar-col:hover i {
 
 .upcoming-row {
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
   padding: 8px 0;
@@ -5764,4 +5764,158 @@ select option {
 
 #budget-month:not(:has([value="other"]:checked)) .day-input {
   display: none;
+}
+
+.tx-form:has([name="currency"][value="UAH"]:checked) .amount-cur::before {
+  content: "₴";
+}
+
+.tx-form:has([name="currency"][value="USD"]:checked) .amount-cur::before {
+  content: "$";
+}
+
+.tx-form:has([name="currency"][value="EUR"]:checked) .amount-cur::before {
+  content: "€";
+}
+
+.currency-row {
+  margin-top: 8px;
+}
+
+.only-foreign {
+  display: none;
+}
+
+.tx-form:has([name="currency"][value="UAH"]:checked):not(:has([name="account"][data-currency="UAH"]:checked)) .only-foreign,
+.tx-form:has([name="currency"][value="USD"]:checked):not(:has([name="account"][data-currency="USD"]:checked)) .only-foreign,
+.tx-form:has([name="currency"][value="EUR"]:checked):not(:has([name="account"][data-currency="EUR"]:checked)) .only-foreign {
+  display: block;
+}
+
+.tx-form:has([name="mode"][value="remind"]:checked) .only-auto,
+.tx-form:not(:has([name="mode"][value="remind"]:checked)) .only-remind {
+  display: none;
+}
+
+/* Notifications */
+
+.chan {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.chan > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.chan small {
+  display: block;
+  color: var(--ink-subtle);
+}
+
+.push-box small,
+.push-box .push-button,
+.push-box .conn-status.push-on {
+  display: none;
+}
+
+.push-box[data-state="on"] .push-on,
+.push-box[data-state="off"] .push-off,
+.push-box[data-state="loading"] .push-off,
+.push-box[data-state="busy"] .push-off,
+.push-box[data-state="install"] .push-install,
+.push-box[data-state="denied"] .push-denied,
+.push-box[data-state="unsupported"] .push-unsupported,
+.push-box[data-state="error"] .push-error {
+  display: block;
+}
+
+.push-box[data-state="off"] .push-button,
+.push-box[data-state="error"] .push-button,
+.push-box[data-state="busy"] .push-button {
+  display: inline-flex;
+}
+
+.push-box[data-state="busy"] .push-button {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.push-box[data-state="on"] .conn-status.push-on {
+  display: inline-block;
+}
+
+.ios-hint {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: 12px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.ios-hint .icon {
+  flex: none;
+}
+
+.time-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.time-row input[type="time"] {
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font: 600 20px var(--font);
+  color-scheme: dark light;
+}
+
+.due-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--ink-muted);
+}
+
+.due-tag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.due-tag.today {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: var(--warn);
+}
+
+.due-tag.late {
+  background: color-mix(in srgb, var(--crit) 18%, transparent);
+  color: var(--crit);
+}
+
+.pay-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--accent-hover);
+}
+
+.pay-mode .icon {
+  width: 13px;
+  height: 13px;
 }

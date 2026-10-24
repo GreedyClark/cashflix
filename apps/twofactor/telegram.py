@@ -66,10 +66,11 @@ def pull_updates():
         yield update
 
 
-def send(chat_id, text, buttons=None):
+def send(chat_id, text, buttons=None, rows=None):
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-    if buttons:
-        payload["reply_markup"] = {"inline_keyboard": [buttons]}
+    keyboard = ([buttons] if buttons else []) + (rows or [])
+    if keyboard:
+        payload["reply_markup"] = {"inline_keyboard": keyboard}
     return call("sendMessage", payload)
 
 

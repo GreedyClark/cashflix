@@ -6,7 +6,9 @@ from . import devices
 from .models import SecondFactor
 
 SESSION_KEY = "twofactor_user"
-OPEN_PREFIXES = ("/static/", "/security/confirm/", "/accounts/logout/", "/api/", "/health/", "/tasks/")
+OPEN_PREFIXES = (
+    "/static/", "/security/confirm/", "/accounts/logout/", "/api/", "/health/", "/tasks/", "/sw.js", "/manifest.webmanifest",
+)
 
 
 def passed(request):

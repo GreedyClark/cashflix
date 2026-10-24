@@ -15,7 +15,9 @@ def run_due_payments(today=None):
     today = today or timezone.localdate()
     created = []
 
-    due = RecurringPayment.objects.filter(is_active=True, next_date__lte=today).select_related(
+    due = RecurringPayment.objects.filter(
+        is_active=True, mode=RecurringPayment.Mode.AUTO, next_date__lte=today
+    ).select_related(
         "household", "account", "category"
     )
     for payment in due:
@@ -42,7 +44,7 @@ PER_MONTH = {
 def in_base(payment, amount, today):
     base = payment.household.base_currency
     try:
-        return amount * convert_rate(payment.account.currency, base, today)
+        return amount * convert_rate(payment.pay_currency, base, today)
     except RateNotFound:
         return None
 
@@ -71,8 +73,7 @@ def first_date_from(payment, today):
 
 @transaction.atomic
 def pay_now(payment, amount, date):
-    tx = payment.make_transaction(date)
-    tx.amount = amount
+    tx = payment.make_transaction(date, account_amount=amount)
     tx.save()
     payment.next_date = payment.following_date(payment.next_date)
     payment.save(update_fields=["next_date"])
