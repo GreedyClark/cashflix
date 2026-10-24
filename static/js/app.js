@@ -54,3 +54,47 @@ function copyText(button) {
     label.textContent = original;
   }, 1800);
 }
+
+document.addEventListener("keydown", function (event) {
+  var row = event.target.closest('[role="button"]');
+  if (row && event.key === "Enter" && event.target === row) {
+    row.click();
+  }
+});
+
+document.querySelectorAll("[data-code]").forEach(function (box) {
+  box.classList.add("is-live");
+});
+
+document.addEventListener("input", function (event) {
+  var box = event.target.closest("[data-code]");
+  if (!box) {
+    return;
+  }
+  var input = event.target;
+  var digits = input.value.replace(/\D/g, "").slice(0, 6);
+  input.value = digits;
+  box.querySelectorAll(".cell").forEach(function (cell, index) {
+    var digit = digits[index] || "";
+    var shown = cell.textContent;
+    if (digit !== shown) {
+      cell.innerHTML = digit ? "<span>" + digit + "</span>" : "";
+    }
+    cell.classList.toggle("filled", Boolean(digit));
+    cell.classList.toggle("caret", index === Math.min(digits.length, 5) && digits.length < 6);
+  });
+  box.classList.toggle("is-full", digits.length === 6);
+  if (digits.length === 6 && input.form) {
+    input.form.requestSubmit();
+  }
+});
+
+document.body.addEventListener("twofactorDone", function (event) {
+  var page = document.querySelector("[data-tfa]");
+  if (page) {
+    page.classList.add("is-done");
+  }
+  setTimeout(function () {
+    window.location.href = event.detail.url;
+  }, 1100);
+});

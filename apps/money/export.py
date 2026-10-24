@@ -20,6 +20,14 @@ DATE_FORMAT = "DD.MM.YYYY"
 OPERATIONS = "Операції"
 
 
+FORMULA_START = ("=", "+", "-", "@", "\t", "\r")
+
+
+def plain(text):
+    text = text or ""
+    return f"'{text}" if text.startswith(FORMULA_START) else text
+
+
 def type_name(value):
     return str(Transaction.Type(value).label).capitalize()
 
@@ -53,15 +61,15 @@ def operations_sheet(book, transactions, base_currency):
         sheet.append([
             tx.date,
             type_name(tx.type),
-            tx.title,
-            tx.category.name if tx.category else "",
-            tx.account.name,
-            tx.to_account.name if tx.to_account else "",
-            tx.member.user.name if tx.member else _("Спільне"),
+            plain(tx.title),
+            plain(tx.category.name) if tx.category else "",
+            plain(tx.account.name),
+            plain(tx.to_account.name) if tx.to_account else "",
+            plain(tx.member.user.name) if tx.member else _("Спільне"),
             amount,
             tx.currency,
             amount_base if tx.type != Transaction.Type.TRANSFER else None,
-            tx.note,
+            plain(tx.note),
         ])
     last = sheet.max_row
     for row in sheet.iter_rows(min_row=2, max_row=last):

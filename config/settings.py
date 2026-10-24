@@ -12,6 +12,8 @@ SECRET_KEY = env("SECRET_KEY")
 ENCRYPTION_KEY = env("ENCRYPTION_KEY", default="")
 GEMINI_MODEL = env("GEMINI_MODEL", default="gemini-flash-latest")
 CRON_SECRET = env("CRON_SECRET", default="")
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+ADMIN_URL = env("ADMIN_URL", default="admin/")
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
@@ -40,12 +42,14 @@ INSTALLED_APPS = [
     "apps.goals",
     "apps.integrations",
     "apps.assistant",
+    "apps.twofactor",
     "apps.core",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "apps.core.security.SecurityHeadersMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -55,6 +59,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "apps.twofactor.gate.SecondFactorMiddleware",
     "apps.households.middleware.CurrentHouseholdMiddleware",
 ]
 
@@ -159,7 +164,8 @@ if not DEBUG:
     SECURE_REDIRECT_EXEMPT = [r"^health/$"]
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=3600)
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=31536000)
+    SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
     ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https"
 
 LOGGING = {

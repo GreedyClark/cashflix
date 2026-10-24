@@ -1,0 +1,22 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Резервний код" %}{% endblock head_title %}
+
+{% block content %}
+  <div class="tfa">
+    <div class="tfa-shield rise"><c-icon name="password" /></div>
+    <div class="tfa-center rise d1">
+      <h1 class="auth-title">{% translate "Резервний код" %}</h1>
+      <p class="auth-text">{% translate "Введіть один із кодів, які ви зберегли під час увімкнення захисту. Кожен код працює один раз." %}</p>
+    </div>
+    <form class="auth-form rise d2{% if error %} shake{% endif %}" method="post">
+      {% csrf_token %}
+      <input class="field-cf backup-input" type="text" name="code" placeholder="abcd-efgh" autocomplete="off" autocapitalize="off" spellcheck="false" required autofocus aria-label="{% translate 'Резервний код' %}">
+      {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+      <label class="check-cf"><input type="checkbox" name="trust" checked>{% translate "Довіряти цьому пристрою 30 днів" %}</label>
+      <button class="btn-cf primary wide" type="submit">{% translate "Увійти" %}</button>
+    </form>
+    {% include "twofactor/_auth_foot.html" with backup=False %}
+  </div>
+{% endblock content %}

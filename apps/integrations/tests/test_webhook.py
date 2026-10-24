@@ -92,3 +92,11 @@ def test_toggle_sets_and_removes_webhook(client, yura, calls, linked):
     linked.refresh_from_db()
     assert linked.webhook_secret == ""
     assert calls[-1] == ("/personal/webhook", {"webHookUrl": ""})
+
+
+def test_webhook_rejects_bad_types(client, home, linked):
+    bad = event("w1", -100)
+    bad["data"]["statementItem"]["amount"] = "-100"
+
+    assert post(client, "s3cret", bad).json()["status"] == "ignored"
+    assert not home.transactions.exists()

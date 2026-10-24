@@ -6,13 +6,13 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from apps.money.forms import default_account
 from apps.money.ingest import ingest
-from apps.money.models import Account, Transaction
+from apps.money.models import Transaction
 from apps.money.rates import RateNotFound
 
+from . import wallet
 from .models import MonobankAccount, MonobankConnection, ShortcutToken
-from .parsing import BadPayload, match_account, parse_amount, parse_moment
+from .parsing import BadPayload, parse_amount, parse_moment
 from .sync import minor, process_item, reconcile
 
 MESSAGES = {
@@ -57,9 +57,11 @@ def shortcut(request):
     except BadPayload as problem:
         return error(str(problem))
 
-    accounts = list(household.accounts.filter(is_archived=False).exclude(kind=Account.Kind.INVESTMENT))
-    fallback = token.account if token.account and not token.account.is_archived else default_account(household, membership)
-    account = match_account(accounts, payload.get("card"), fallback)
+    currency = wallet.currency_of(payload.get("amount"), household)
+    with db_transaction.atomic():
+        account, note = wallet.resolve(household, membership, token, payload.get("card"), currency, amount, moment)
+    if note == wallet.SKIPPED:
+        return JsonResponse({"status": "skipped", "message": "Ця картка не записується: операції приходять з Monobank."})
     if account is None:
         return error("account")
     if MonobankAccount.objects.filter(account=account).exists():
@@ -95,7 +97,7 @@ def shortcut(request):
         "account": tx.account.name,
         "category": tx.category.name if tx.category else "",
         "review": tx.needs_review,
-        "message": summary(tx, status),
+        "message": (f"Створено рахунок «{account.name}». " if note == wallet.CREATED else "") + summary(tx, status),
     }, status=201 if status == "created" else 200)
 
 
@@ -123,8 +125,11 @@ def monobank_webhook(request, secret):
         payload = json.loads(request.body or b"{}")
         data = payload["data"]
         item = data["statementItem"]
-        mono_id = data["account"]
+        mono_id = str(data["account"])
+        valid = isinstance(item["id"], str) and isinstance(item["time"], int) and isinstance(item["amount"], int)
     except (ValueError, KeyError, TypeError):
+        return JsonResponse({"status": "ignored"})
+    if not valid or abs(item["amount"]) >= 10**9:
         return JsonResponse({"status": "ignored"})
     mono_account = connection.accounts.filter(mono_id=mono_id, account__isnull=False).select_related(
         "account__household", "connection__membership"

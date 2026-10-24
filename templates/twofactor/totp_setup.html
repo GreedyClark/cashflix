@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Google Authenticator · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow"><a href="{% url 'twofactor:security' %}">{% translate "Безпека входу" %}</a></p>
+      <h1 class="page-title">Google Authenticator</h1>
+    </div>
+  </div>
+
+  <section class="panel sec-wide">
+    <div class="panel-body totp-layout">
+      <div class="qr-box rise">
+        {{ qr|safe }}
+        <span class="qr-beam" aria-hidden="true"></span>
+        <i class="qr-corner tl"></i><i class="qr-corner tr"></i><i class="qr-corner bl"></i><i class="qr-corner br"></i>
+      </div>
+      <form class="totp-side rise d2{% if error %} shake{% endif %}" method="post">
+        {% csrf_token %}
+        <div>
+          <b>{% translate "1. Відскануйте QR-код" %}</b>
+          <p class="bud-hint">{% translate "У Google Authenticator натисніть «+» → «Сканувати QR-код». Якщо сканувати не виходить, введіть ключ вручну:" %}</p>
+          <span class="totp-key">{{ secret }}</span>
+        </div>
+        <div>
+          <b>{% translate "2. Введіть код із застосунку" %}</b>
+          <div class="totp-confirm">
+            {% include "twofactor/_code_input.html" %}
+            <button class="btn-cf primary" type="submit">{% translate "Підтвердити" %}</button>
+          </div>
+          {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+        </div>
+      </form>
+    </div>
+  </section>
+{% endblock %}

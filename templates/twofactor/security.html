@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Безпека входу" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow">{{ user.name }}</p>
+      <h1 class="page-title">{% translate "Безпека входу" %}</h1>
+    </div>
+  </div>
+
+  <div class="sec-page">
+    {% if new_codes %}
+      <section class="panel codes-panel rise">
+        <div class="panel-body">
+          <h2 class="panel-title">{% translate "Збережіть резервні коди" %}</h2>
+          <p class="bud-hint">{% translate "Вони знадобляться, якщо телефон загубиться. Кожен код працює один раз. Більше ми їх не покажемо." %}</p>
+          <textarea class="codes-list num" id="backup-codes" rows="5" readonly aria-label="{% translate 'Резервні коди' %}">{{ new_codes|join:"
+" }}</textarea>
+          <div class="conn-actions">
+            <button class="btn-cf" type="button" data-copy="#backup-codes" data-copied="{% translate 'Скопійовано' %}"><c-icon name="copy" /><span>{% translate "Копіювати" %}</span></button>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="panel rise d1">
+      <div class="panel-body sec-body">
+        <div class="sec-intro">
+          <div class="tfa-shield{% if not factor.enabled %} off{% endif %}"><c-icon name="shield-lock" /></div>
+          <div>
+            <h2 class="panel-title">{% translate "Другий крок після Google" %}</h2>
+            <p class="bud-hint">{% translate "Навіть якщо хтось отримає доступ до вашої пошти, без цього кроку в CashFlix не увійде." %}</p>
+          </div>
+        </div>
+
+        <form class="sec-methods" method="post" action="{% url 'twofactor:choose' %}">
+          {% csrf_token %}
+          <button class="sec-method{% if factor.method == methods.NONE %} is-active{% endif %}" type="submit" name="method" value="{{ methods.NONE }}">
+            <c-icon name="lock" /><b>{% translate "Лише Google" %}</b><small>{% translate "Без додаткового кроку" %}</small>
+          </button>
+          <button class="sec-method{% if factor.method == methods.TELEGRAM %} is-active{% endif %}" type="submit" name="method" value="{{ methods.TELEGRAM }}"{% if not telegram_ready %} disabled{% endif %}>
+            <c-icon name="brand-telegram" /><b>Telegram</b><small>{% if telegram_ready %}{% translate "Бот надішле кнопку «Це я»" %}{% else %}{% translate "Бот ще не налаштовано" %}{% endif %}</small>
+          </button>
+          <button class="sec-method{% if factor.method == methods.TOTP %} is-active{% endif %}" type="submit" name="method" value="{{ methods.TOTP }}">
+            <c-icon name="qrcode" /><b>Google Authenticator</b><small>{% translate "6-значний код із застосунку" %}</small>
+          </button>
+        </form>
+
+        {% if factor.method == methods.TELEGRAM %}
+          <div class="sec-state">
+            <span class="tx-icon tone-1"><c-icon name="brand-telegram" /></span>
+            <div><b>{% if factor.telegram_username %}{% blocktranslate with name=factor.telegram_username %}Підключено до @{{ name }}{% endblocktranslate %}{% else %}{% translate "Telegram підключено" %}{% endif %}</b><div class="bud-hint">{% translate "Запити на вхід приходять у бот" %}</div></div>
+            <a class="btn-cf sm" href="{% url 'twofactor:telegram' %}">{% translate "Інший акаунт" %}</a>
+          </div>
+        {% elif factor.method == methods.TOTP %}
+          <div class="sec-state">
+            <span class="tx-icon tone-3"><c-icon name="qrcode" /></span>
+            <div><b>{% translate "Google Authenticator підключено" %}</b><div class="bud-hint">{% translate "Новий телефон? Підключіть застосунок наново." %}</div></div>
+            <a class="btn-cf sm" href="{% url 'twofactor:totp' %}">{% translate "Наново" %}</a>
+          </div>
+        {% endif %}
+      </div>
+    </section>
+
+    {% if factor.enabled %}
+      <section class="panel rise d2">
+        <div class="panel-body">
+          <h2 class="panel-title">{% translate "Довірені пристрої" %}</h2>
+          <p class="bud-hint">{% translate "На цих пристроях другий крок не питаємо 30 днів." %}</p>
+          <div class="sec-list">
+            {% for device in trusted %}
+              <div class="sec-row">
+                <span class="tx-icon tone-{% cycle 2 3 4 5 %}"><c-icon name="{% if 'iPhone' in device.label or 'Android' in device.label %}device-mobile{% else %}device-desktop{% endif %}" /></span>
+                <div><b>{{ device.label }}</b><small>{% if device.is_current %}{% translate "Цей пристрій" %} · {% endif %}{% blocktranslate with date=device.expires_at|date:"j E" %}до {{ date }}{% endblocktranslate %}</small></div>
+                <form method="post" action="{% url 'twofactor:forget_device' device.pk %}">{% csrf_token %}<button class="btn-cf sm" type="submit">{% translate "Забути" %}</button></form>
+              </div>
+            {% empty %}
+              <p class="panel-text">{% translate "Поки немає. Поставте галочку «Довіряти цьому пристрою» під час входу." %}</p>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="panel rise d3">
+        <div class="panel-body sec-codes">
+          <span class="tx-icon tone-4"><c-icon name="password" /></span>
+          <div>
+            <h2 class="panel-title">{% translate "Резервні коди" %}</h2>
+            <p class="bud-hint">{% blocktranslate count left=codes_left %}Якщо телефон загубився. Лишився {{ left }} код.{% plural %}Якщо телефон загубився. Лишилось кодів: {{ left }}.{% endblocktranslate %}</p>
+          </div>
+          <form method="post" action="{% url 'twofactor:new_codes' %}">{% csrf_token %}<button class="btn-cf" type="submit">{% translate "Нові коди" %}</button></form>
+        </div>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

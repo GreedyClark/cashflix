@@ -1,7 +1,7 @@
 {% load i18n money %}
 <c-vars tx />
 <li class="tx" role="button" tabindex="0"
-    hx-get="{% url 'money:transaction_edit' tx.pk %}" hx-target="#tx-dialog-body" hx-trigger="click, keyup[key=='Enter']">
+    hx-get="{% url 'money:transaction_edit' tx.pk %}" hx-target="#tx-dialog-body" hx-trigger="click">
   {% if tx.is_transfer %}
     <span class="tx-icon tone-0"><c-icon name="arrows-exchange" /></span>
   {% else %}

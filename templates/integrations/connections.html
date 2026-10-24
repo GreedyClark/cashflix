@@ -41,7 +41,7 @@
 
         <form class="conn-form" method="post">
           {% csrf_token %}
-          <span class="f-label">{% translate "Рахунок, якщо картку не впізнано" %}</span>
+          <span class="f-label">{% translate "Рахунок, якщо шорткат не передав картку" %}</span>
           <div class="pill-row">
             <label class="pill-cf"><input type="radio" name="account" value=""{% if not token.account_id %} checked{% endif %}>{% translate "Моя основна картка" %}</label>
             {% for account in shortcut_accounts %}
@@ -49,7 +49,7 @@
             {% endfor %}
           </div>
           <div class="conn-actions"><button class="btn-cf sm" type="submit">{% translate "Зберегти" %}</button></div>
-          <p class="field-help">{% translate "Назва картки з Wallet порівнюється з назвами рахунків. Назвіть рахунок як картку, наприклад «Монобанк», і операція потрапить куди треба." %}</p>
+          <p class="field-help">{% translate "Нова картка з Гаманця сама стає рахунком після першої оплати. Змінити прив'язку можна в блоці «Картки з Гаманця»." %}</p>
         </form>
 
         <div class="conn-actions">
@@ -69,6 +69,37 @@
         </form>
       {% endif %}
     </section>
+
+    {% if wallet_cards %}
+      <section class="panel conn-card" id="wallet-cards">
+        <div class="conn-head">
+          <span class="tx-icon tone-2"><c-icon name="credit-card" /></span>
+          <div>
+            <h2>{% translate "Картки з Гаманця" %}</h2>
+            <p class="bud-hint">{% translate "Картки, якими вже платили через шорткат. Оберіть, на який рахунок записувати оплати. Якщо змінити рахунок, вже записані оплати переїдуть на новий." %}</p>
+          </div>
+        </div>
+        <form class="mono-links" method="post" action="{% url 'integrations:wallet_links' %}">
+          {% csrf_token %}
+          {% for card in wallet_cards %}
+            <div class="mono-row">
+              <span class="mono-name">
+                <c-icon name="credit-card" />{{ card.title }}
+                <span class="bud-hint">{% if card.last_used_at %}{% blocktranslate with date=card.last_used_at|date:"j E, H:i" %}остання оплата {{ date }}{% endblocktranslate %}{% endif %}{% if card.auto_created %} · {% translate "рахунок створено автоматично" %}{% endif %}</span>
+              </span>
+              <div class="pill-row mono-choices" role="radiogroup" aria-label="{% blocktranslate with name=card.title %}Рахунок для {{ name }}{% endblocktranslate %}">
+                <label class="pill-cf"><input type="radio" name="card_{{ card.pk }}" value=""{% if card.ignored %} checked{% endif %}>{% translate "Не записувати" %}</label>
+                {% for account in card.choices %}
+                  <label class="pill-cf"><input type="radio" name="card_{{ card.pk }}" value="{{ account.pk }}"{% if card.account_id == account.pk %} checked{% endif %}><c-icon :name="account.icon" />{{ account.name }}</label>
+                {% endfor %}
+              </div>
+              <span></span>
+            </div>
+          {% endfor %}
+          <div class="conn-actions"><button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button></div>
+        </form>
+      </section>
+    {% endif %}
 
     <section class="panel conn-card">
       <h2 class="conn-subtitle">{% translate "Як налаштувати шорткат" %}</h2>
@@ -91,6 +122,7 @@
           </table>
         </li>
         <li>{% blocktranslate %}За бажанням: «Отримати значення словника» <code>message</code> → «Показати сповіщення». Побачите, що записалось і в яку категорію.{% endblocktranslate %}</li>
+        <li>{% blocktranslate %}Першу оплату новою карткою CashFlix запише на новий рахунок з назвою картки з Гаманця. Картки Monobank пропускаються, бо їхні операції приходять напряму з банку.{% endblocktranslate %}</li>
       </ol>
       {% if not request.is_secure %}<p class="field-help">{% translate "Поки сайт працює лише на вашому комп'ютері, iPhone до нього не достукається. Шорткат запрацює після деплою, а перевірити ендпоінт можна запитом із самого комп'ютера." %}</p>{% endif %}
     </section>

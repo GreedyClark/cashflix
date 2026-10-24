@@ -1,11 +1,13 @@
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 AMOUNT_CHARS = re.compile(r"[^\d,.\-]")
+MAX_AMOUNT = Decimal("10000000")
+MAX_SKEW = timedelta(days=31)
 
 
 class BadPayload(ValueError):
@@ -25,9 +27,9 @@ def parse_amount(value):
         text = text.replace(",", ".")
     try:
         amount = abs(Decimal(text)).quantize(Decimal("0.01"))
-    except InvalidOperation:
+    except (InvalidOperation, ValueError):
         raise BadPayload("amount")
-    if amount <= 0:
+    if amount <= 0 or amount >= MAX_AMOUNT:
         raise BadPayload("amount")
     return amount
 
@@ -35,7 +37,10 @@ def parse_amount(value):
 def parse_moment(value):
     if not value:
         return timezone.now()
-    moment = parse_datetime(str(value).strip().replace(" ", "T", 1))
+    try:
+        moment = parse_datetime(str(value).strip().replace(" ", "T", 1))
+    except ValueError:
+        moment = None
     if moment is None:
         for pattern in ("%d.%m.%Y %H:%M", "%d.%m.%Y, %H:%M", "%d.%m.%Y"):
             try:
@@ -44,17 +49,9 @@ def parse_moment(value):
             except ValueError:
                 continue
     if moment is None:
-        raise BadPayload("time")
+        return timezone.now()
     if timezone.is_naive(moment):
         moment = timezone.make_aware(moment)
+    if abs(moment - timezone.now()) > MAX_SKEW:
+        return timezone.now()
     return moment
-
-
-def match_account(accounts, card, default):
-    card = (card or "").strip().lower()
-    if card:
-        for account in accounts:
-            name = account.name.lower()
-            if name in card or card in name:
-                return account
-    return default

@@ -130,3 +130,25 @@ class MonobankAccount(models.Model):
         if self.is_jar:
             return self.title.split("«", 1)[-1].rstrip("»") or self.title
         return f"Monobank {self.title.split(' ·· ')[0]}"
+
+
+class WalletCard(models.Model):
+    household = models.ForeignKey("households.Household", on_delete=models.CASCADE, related_name="wallet_cards")
+    key = models.CharField(max_length=80)
+    title = models.CharField(_("назва в Гаманці"), max_length=80)
+    account = models.ForeignKey(
+        Account, on_delete=models.SET_NULL, null=True, blank=True, related_name="wallet_cards", verbose_name=_("рахунок")
+    )
+    ignored = models.BooleanField(_("не записувати"), default=False)
+    auto_created = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("картка з Гаманця")
+        verbose_name_plural = _("картки з Гаманця")
+        ordering = ["title"]
+        constraints = [models.UniqueConstraint(fields=["household", "key"], name="unique_wallet_card")]
+
+    def __str__(self):
+        return self.title

@@ -81,3 +81,14 @@ def test_export_only_own_household(client, user, user_household, home, mono, foo
     _, book = export(client, month="2026-09")
 
     assert book["Операції"].max_row == 1
+
+
+def test_formulas_from_bank_text_are_neutralized(yura_client, home, mono, food):
+    add(home, mono, food, "10", datetime.date(2026, 9, 3), title='=HYPERLINK("http://evil","click")', note="+1+1")
+
+    _, book = export(yura_client, month="2026-09")
+
+    row = book["Операції"][2]
+    assert row[2].data_type == "s"
+    assert row[2].value.startswith("'=")
+    assert row[10].value == "'+1+1"

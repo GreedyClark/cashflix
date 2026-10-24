@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% translate "Підключити Telegram" %} · CashFlix{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <div>
+      <p class="eyebrow"><a href="{% url 'twofactor:security' %}">{% translate "Безпека входу" %}</a></p>
+      <h1 class="page-title">{% translate "Підключити Telegram" %}</h1>
+    </div>
+  </div>
+
+  <section class="panel sec-narrow rise">
+    <div class="panel-body tfa-steps">
+      <div class="tfa-step">
+        <span class="tfa-num">1</span>
+        <div>
+          <b>{% translate "Відкрийте бота" %}</b>
+          <p class="bud-hint">{% translate "Посилання вже містить одноразовий код, нічого копіювати не треба." %}</p>
+          <a class="btn-cf primary" href="{{ link }}" target="_blank" rel="noopener"><c-icon name="brand-telegram" />{% blocktranslate %}Відкрити @{{ bot }}{% endblocktranslate %}</a>
+        </div>
+      </div>
+      <div class="tfa-step">
+        <span class="tfa-num">2</span>
+        <div>
+          <b>{% translate "Натисніть «Start»" %}</b>
+          <p class="bud-hint">{% translate "Бот відповість «Готово», а ця сторінка оновиться сама." %}</p>
+        </div>
+      </div>
+      <div class="tfa-waiting" hx-get="{% url 'twofactor:telegram_status' %}" hx-trigger="every 2s" hx-target="this" hx-swap="innerHTML">
+        <span class="tfa-pulse"></span><span class="dots">{% translate "Чекаємо на Telegram" %}</span>
+      </div>
+    </div>
+  </section>
+{% endblock %}

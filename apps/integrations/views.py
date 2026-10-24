@@ -12,8 +12,9 @@ from django.views.decorators.http import require_POST
 from apps.money.models import Account
 
 from . import monobank
-from .models import MonobankAccount, MonobankConnection, ShortcutToken
+from .models import MonobankAccount, MonobankConnection, ShortcutToken, WalletCard
 from .sync import connect, reconcile, refresh_accounts, sync_account
+from .wallet import relink
 
 SKIP = ""
 NEW = "new"
@@ -63,7 +64,14 @@ def connections(request):
             item.choices = [a for a in accounts if a.currency == item.currency]
             mono_accounts.append(item)
 
+    accounts = list(usable_accounts(request.household))
+    wallet_cards = list(WalletCard.objects.filter(household=request.household).select_related("account"))
+    for card in wallet_cards:
+        currency = card.account.currency if card.account else None
+        card.choices = [a for a in accounts if currency is None or a.currency == currency]
+
     context = {
+        "wallet_cards": wallet_cards,
         "token": token,
         "form": form,
         "raw_token": request.session.pop("new_shortcut_token", None),
@@ -213,4 +221,19 @@ def monobank_disconnect(request):
             pass
     MonobankConnection.objects.filter(membership=request.membership).delete()
     messages.success(request, _("Monobank відключено. Вже підтягнуті операції лишилися."))
+    return redirect("integrations:connections")
+
+
+@require_POST
+def wallet_links(request):
+    accounts = {str(a.pk): a for a in usable_accounts(request.household)}
+    for card in WalletCard.objects.filter(household=request.household).select_related("account"):
+        value = request.POST.get(f"card_{card.pk}")
+        if value is None:
+            continue
+        if value == SKIP:
+            relink(card, None, ignored=True)
+        elif value in accounts:
+            relink(card, accounts[value], ignored=False)
+    messages.success(request, _("Картки з Гаманця збережено."))
     return redirect("integrations:connections")

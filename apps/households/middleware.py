@@ -5,7 +5,7 @@ from django.urls import reverse
 from .models import Membership
 
 SESSION_KEY = "household_id"
-EXEMPT_PREFIXES = ("/accounts/", "/admin/", "/static/", "/onboarding/", "/join/")
+EXEMPT_PREFIXES = ("/accounts/", "/admin/", "/static/", "/onboarding/", "/join/", "/security/confirm/")
 
 
 class CurrentHouseholdMiddleware:

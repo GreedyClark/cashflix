@@ -1,0 +1,46 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Підтвердження входу" %}{% endblock head_title %}
+
+{% block content %}
+  <div class="tfa" data-tfa>
+    <div class="tg-hero">
+      <div class="tg-wait"><span class="tg-ring"></span><span class="tg-ring"></span><span class="tg-ring"></span><div class="tg-core"><c-icon name="brand-telegram" /></div></div>
+      <div class="tg-done"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 21l6 6l12 -14" /></svg></div>
+    </div>
+
+    <div class="tfa-swap">
+      <div class="tfa-wait-text">
+        <h1 class="auth-title">{% translate "Підтвердьте вхід" %}</h1>
+        <p class="auth-text"><span class="dots">{% translate "Натисніть «Це я» в Telegram" %}</span></p>
+      </div>
+      <div class="tfa-done-text">
+        <h1 class="auth-title">{% translate "Це ви!" %}</h1>
+        <p class="auth-text">{% translate "Входимо в CashFlix…" %}</p>
+      </div>
+    </div>
+
+    {% if error %}<p class="alert-cf error">{{ error }}</p>{% endif %}
+
+    <div class="tg-bubble">
+      <small>{% if factor.telegram_username %}@{{ factor.telegram_username }}{% else %}Telegram{% endif %} · {% translate "щойно" %}</small>
+      <div><b>{% translate "Вхід у CashFlix" %}</b><br>{% translate "Це ви?" %}</div>
+      <div class="tg-buttons" aria-hidden="true"><span>✅ {% translate "Це я" %}</span><span>{% translate "Не я" %}</span></div>
+    </div>
+
+    <form class="auth-form rise d3" hx-get="{% url 'twofactor:confirm_status' %}" hx-trigger="every 2s" hx-target="#tfa-note">
+      <label class="check-cf"><input type="checkbox" name="trust" value="on" checked>{% translate "Довіряти цьому пристрою 30 днів" %}</label>
+    </form>
+    <div id="tfa-note" aria-live="polite"></div>
+
+    <form class="tfa-resend rise d4" method="post">
+      {% csrf_token %}
+      <span>{% translate "Не прийшло повідомлення?" %}</span>
+      <button class="link-btn" type="submit">{% translate "Надіслати ще раз" %}</button>
+    </form>
+    {% include "twofactor/_auth_foot.html" with backup=True %}
+  </div>
+{% endblock content %}
+
+{% block extra_body %}{% include "twofactor/_auth_scripts.html" %}{% endblock extra_body %}

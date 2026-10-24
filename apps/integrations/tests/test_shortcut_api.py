@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from apps.integrations.models import ShortcutToken
 from apps.integrations.parsing import BadPayload, parse_amount
@@ -66,7 +67,7 @@ def test_default_account_from_settings(client, home, yura, raw_token, mono, cash
     token.account = cash
     token.save()
 
-    post(client, raw_token, amount="20", merchant="Кіоск", card="Невідома картка")
+    post(client, raw_token, amount="20", merchant="Кіоск")
 
     assert home.transactions.get().account == cash
 
@@ -110,3 +111,18 @@ def test_new_token_replaces_old(client, yura, raw_token):
 
     assert ShortcutToken.objects.find(raw_token) is None
     assert ShortcutToken.objects.find(fresh) is not None
+
+
+@pytest.mark.parametrize("value", ["23 жовт. 2026 р. о 03:26", "2001-01-01T10:00:00", "nonsense"])
+def test_unreadable_or_far_time_falls_back_to_now(client, home, raw_token, mono, value):
+    response = post(client, raw_token, amount="10", merchant="x", time=value)
+
+    assert response.status_code == 201
+    tx = home.transactions.get()
+    assert abs((tx.occurred_at - timezone.now()).total_seconds()) < 60
+
+
+def test_huge_amount_is_rejected(client, raw_token, mono):
+    response = post(client, raw_token, amount="99999999999", merchant="x")
+
+    assert response.json()["error"] == "amount"

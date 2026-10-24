@@ -282,3 +282,54 @@ def test_webhook_keeps_balance_in_sync(client, home, mono, connection, bank):
     assert balance_of(mono) == Decimal("980.00")
     card.refresh_from_db()
     assert card.balance == Decimal("980.00")
+
+
+def shortcut_post(client, raw, **payload):
+    import json
+
+    return client.post(
+        reverse("integrations:shortcut_api"), json.dumps(payload),
+        content_type="application/json", headers={"Authorization": f"Bearer {raw}"},
+    )
+
+
+def test_shortcut_new_card_creates_account_instead_of_monobank(client, home, yura, mono, connection):
+    from apps.integrations.models import ShortcutToken
+
+    link(connection, "black", mono)
+    _token, raw = ShortcutToken.issue(yura)
+
+    response = shortcut_post(client, raw, amount="439,00 ₴", merchant="Magazyn Produkty", card="ПриватБанк")
+
+    assert response.status_code == 201
+    tx = home.transactions.get()
+    assert tx.account.name == "ПриватБанк"
+    assert response.json()["message"].startswith("Створено рахунок «ПриватБанк»")
+
+
+def test_shortcut_skips_unknown_monobank_card_name(client, home, yura, mono, connection):
+    from apps.integrations.models import ShortcutToken, WalletCard
+
+    link(connection, "black", mono)
+    _token, raw = ShortcutToken.issue(yura)
+
+    response = shortcut_post(client, raw, amount="100", merchant="x", card="Mono White")
+
+    assert response.json()["status"] == "skipped"
+    assert WalletCard.objects.get().ignored
+    assert not home.transactions.exists()
+    assert home.accounts.count() == 1
+
+
+def test_shortcut_skips_twin_of_monobank_operation(client, home, yura, mono, connection):
+    from apps.integrations.models import ShortcutToken
+    from apps.integrations.sync import process_item
+
+    black = link(connection, "black", mono)
+    process_item(black, {"id": "m1", "time": int(timezone.now().timestamp()), "amount": -25000, "description": "АТБ"})
+    _token, raw = ShortcutToken.issue(yura)
+
+    response = shortcut_post(client, raw, amount="250", merchant="АТБ", card="Чорна картка")
+
+    assert response.json()["status"] == "skipped"
+    assert home.transactions.count() == 1

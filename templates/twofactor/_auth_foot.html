@@ -1,0 +1,4 @@
+{% load i18n %}<div class="tfa-foot rise d4">
+  {% if backup %}<a href="{% url 'twofactor:confirm_backup' %}">{% translate "Ввести резервний код" %}</a>{% else %}<a href="{% url 'twofactor:confirm' %}">{% translate "Назад" %}</a>{% endif %}
+  <form method="post" action="{% url 'account_logout' %}">{% csrf_token %}<button class="link-btn" type="submit">{% translate "Вийти" %}</button></form>
+</div>

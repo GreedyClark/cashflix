@@ -15,5 +15,6 @@ urlpatterns = [
     path("connections/monobank/links/", views.monobank_links, name="monobank_links"),
     path("connections/monobank/<int:pk>/sync/", views.monobank_sync, name="monobank_sync"),
     path("connections/monobank/webhook/", views.monobank_webhook_toggle, name="monobank_webhook_toggle"),
+    path("connections/wallet/", views.wallet_links, name="wallet_links"),
     path("connections/monobank/disconnect/", views.monobank_disconnect, name="monobank_disconnect"),
 ]

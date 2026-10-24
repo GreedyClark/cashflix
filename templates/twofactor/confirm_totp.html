@@ -1,0 +1,24 @@
+{% extends "allauth/layouts/base.html" %}
+{% load i18n %}
+
+{% block head_title %}{% translate "Підтвердження входу" %}{% endblock head_title %}
+
+{% block content %}
+  <div class="tfa">
+    <div class="tfa-shield rise"><c-icon name="shield-lock" /></div>
+    <div class="tfa-center rise d1">
+      <h1 class="auth-title">{% translate "Код із застосунку" %}</h1>
+      <p class="auth-text">{% translate "Відкрийте Google Authenticator і введіть 6 цифр для CashFlix." %}</p>
+    </div>
+    <form class="auth-form rise d2{% if error %} shake{% endif %}" method="post">
+      {% csrf_token %}
+      {% include "twofactor/_code_input.html" %}
+      {% if error %}<p class="field-error">{{ error }}</p>{% endif %}
+      <label class="check-cf"><input type="checkbox" name="trust" checked>{% translate "Довіряти цьому пристрою 30 днів" %}</label>
+      <button class="btn-cf primary wide" type="submit">{% translate "Увійти" %}</button>
+    </form>
+    {% include "twofactor/_auth_foot.html" with backup=True %}
+  </div>
+{% endblock content %}
+
+{% block extra_body %}{% include "twofactor/_auth_scripts.html" %}{% endblock extra_body %}
