@@ -48,8 +48,8 @@
   </section>
   <section class="panel kpi">
     <div class="kpi-top"><span>{% translate "Заощаджено" %}</span></div>
-    <div class="kpi-value num">{% if kpis.savings is not None %}{{ kpis.savings }}<small>%</small>{% else %}—{% endif %}</div>
-    <div class="kpi-note">{% translate "прогноз на кінець місяця" %}</div>
+    <div class="kpi-value num{% if kpis.savings is not None and kpis.savings < 0 %} bad{% endif %}">{% if kpis.savings is not None %}{{ kpis.savings }}<small>%</small>{% else %}—{% endif %}</div>
+    <div class="kpi-note">{% if kpis.savings is None %}{% translate "прогноз з'явиться з 5-го дня місяця" %}{% elif kpis.savings < 0 %}{% translate "витрати можуть перевищити дохід" %}{% elif kpis.expected %}{% blocktranslate with amount=kpis.expected|money:currency %}прогноз з очікуваним доходом {{ amount }}{% endblocktranslate %}{% else %}{% translate "прогноз на кінець місяця" %}{% endif %}</div>
     <div class="kpi-spark" data-chart="savings"></div>
   </section>
 </div>

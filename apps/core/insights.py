@@ -75,9 +75,9 @@ class Insights:
 
     def forecast(self):
         overview = self.overview
-        if overview.day < 5 or not overview.earned:
+        if overview.day < 5 or not overview.income_forecast:
             return []
-        result = overview.earned - overview.saved - overview.forecast_total
+        result = overview.income_forecast - overview.saved - overview.forecast_total
         if result >= 0:
             text = _("Якщо тримати такий темп, місяць закриєте з плюсом приблизно %(amount)s.")
             return [Insight("good", "pig-money", text % {"amount": self.money(result)}, 60)]

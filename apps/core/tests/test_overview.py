@@ -6,6 +6,7 @@ from django.urls import reverse
 
 from apps.core.dashboard import Overview
 from apps.money.models import Transaction
+from apps.recurring.models import RecurringPayment
 
 TODAY = datetime.date(2026, 10, 10)
 
@@ -84,17 +85,27 @@ def test_left_for_month_subtracts_savings(home, mono, food, salary):
 
 
 def test_forecast_adds_unpaid_recurring(home, mono, food):
-    import datetime
-    from decimal import Decimal
-
-    from apps.core.dashboard import Overview
-    from apps.money.models import Transaction
-    from apps.recurring.models import RecurringPayment
-
-    today = datetime.date(2026, 10, 10)
-    Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("1000"), date=datetime.date(2026, 10, 5), title="x")
+    add(home, mono, "1000", datetime.date(2026, 10, 5), category=food)
     RecurringPayment.objects.create(household=home, title="Квартира", amount=Decimal("12000"), account=mono, category=food, start_date=datetime.date(2026, 10, 28))
 
-    overview = Overview(home, today=today)
+    overview = Overview(home, today=TODAY)
 
     assert overview.forecast_total == Decimal("1000") + Decimal("100") * 21 + Decimal("12000")
+
+
+def test_savings_forecast_counts_expected_salary(home, mono, food, salary, yura):
+    add(home, mono, "20000", datetime.date(2026, 10, 1), type="income", category=salary, member=yura)
+    add(home, mono, "2000", datetime.date(2026, 10, 5), category=food, member=yura)
+    RecurringPayment.objects.create(
+        household=home, title="Зарплата Олі", type="income", amount=Decimal("20000"), account=mono,
+        category=salary, start_date=datetime.date(2026, 10, 25),
+    )
+
+    kpis = Overview(home, today=TODAY).kpis()
+
+    assert kpis["expected"] == Decimal("20000")
+    assert kpis["savings"] == round((Decimal("40000") - Decimal("6200")) / Decimal("40000") * 100)
+
+
+def test_no_savings_forecast_in_first_days(home, october):
+    assert Overview(home, today=datetime.date(2026, 10, 3)).kpis()["savings"] is None

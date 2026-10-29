@@ -108,13 +108,22 @@ class Overview:
         return self.spent + pace * (self.days_in_month - self.day) + self.recurring_left
 
     @cached_property
+    def expected_income(self):
+        income = MonthIncome(self.household, self.period, self.today)
+        return income.of(self.member.pk).expected if self.member else income.family.expected
+
+    @cached_property
+    def income_forecast(self):
+        return self.earned + self.expected_income
+
+    @cached_property
     def live_money(self):
         return sum((a.converted for a in self.accounts if a.converted is not None and a.kind in LIVE), ZERO)
 
     def kpis(self):
         before = self.same_period_last_month()
-        forecast = self.forecast_total
-        savings = round((self.earned - forecast) / self.earned * 100) if self.earned else None
+        income = self.income_forecast
+        savings = round((income - self.forecast_total) / income * 100) if income and self.day >= 5 else None
         return {
             "left": self.left,
             "saved": self.saved,
@@ -126,6 +135,7 @@ class Overview:
             "spent": self.spent,
             "spent_change": percent_change(self.spent, before.expenses().total_base()),
             "savings": savings,
+            "expected": self.expected_income,
         }
 
     @cached_property
