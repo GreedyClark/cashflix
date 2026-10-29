@@ -6103,3 +6103,21 @@ input[type="date"]::-webkit-date-and-time-value {
 @media (max-width: 575px) {
   .bud-value .bud-of { display: block; margin-top: 2px; font-size: 15px; font-weight: 500; color: var(--ink-tertiary); }
 }
+
+.goal-history li[hx-get] {
+  cursor: pointer;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 8px;
+}
+
+.goal-history li[hx-get]:hover,
+.goal-history li[hx-get]:focus-visible {
+  background: var(--surface-2);
+}
+
+.f-label small {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--ink-tertiary);
+}

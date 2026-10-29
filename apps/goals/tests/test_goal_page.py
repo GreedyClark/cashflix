@@ -208,3 +208,72 @@ def test_transfer_form_prefills_target_account(yura_client, jar):
     response = yura_client.get(reverse("money:transaction_create"), {"type": "transfer", "to_account": jar.pk})
 
     assert str(response.context["form"]["to_account"].value()) == str(jar.pk)
+
+
+def test_old_hryvnia_contributions_convert_after_currency_change(home, usd_rate):
+    goal = Goal.objects.create(household=home, name="Подушка", target_amount=Decimal("6000"))
+    GoalContribution.objects.create(goal=goal, amount=Decimal("41320"), date=datetime.date(2026, 10, 5))
+    goal.currency_code = "USD"
+    goal.save()
+
+    item = goal_items(home, TODAY)[0]
+
+    assert item["saved"] == Decimal("1000.00")
+    assert goal.get_saved() == Decimal("1000.00")
+
+
+def test_dollar_contribution_remembers_its_currency(yura_client, home, usd_rate):
+    goal = Goal.objects.create(household=home, name="Подушка", target_amount=Decimal("5000"), currency_code="USD")
+
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "100", "date": "2026-10-25", "source": "", "member": ""})
+
+    assert goal.contributions.get().currency == "USD"
+    assert goal.get_saved() == Decimal("100")
+
+
+def test_edit_contribution_updates_its_transfer(yura_client, home, mono):
+    goal = Goal.objects.create(household=home, name="Відпустка", target_amount=Decimal("60000"))
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "3000", "date": "2026-10-25", "source": mono.pk, "member": ""})
+    contribution = goal.contributions.get()
+
+    form = yura_client.get(reverse("goals:contribution_edit", args=[contribution.pk]))
+    assert 'value="3000"' in form.content.decode()
+
+    yura_client.post(reverse("goals:contribution_edit", args=[contribution.pk]), {"direction": "in", "amount": "2500", "date": "2026-10-26", "source": mono.pk, "member": "", "note": "Премія"})
+
+    contribution = goal.contributions.get()
+    assert (contribution.amount, contribution.date, contribution.note) == (Decimal("2500"), datetime.date(2026, 10, 26), "Премія")
+    assert home.transactions.get().amount == Decimal("2500")
+    assert mono.get_balance() == Decimal("-1500")
+
+
+def test_edit_keeps_hryvnia_contribution_in_hryvnia(yura_client, home, usd_rate):
+    goal = Goal.objects.create(household=home, name="Подушка", target_amount=Decimal("6000"), currency_code="USD")
+    contribution = GoalContribution.objects.create(goal=goal, amount=Decimal("41320"), date=datetime.date(2026, 10, 5))
+
+    yura_client.post(reverse("goals:contribution_edit", args=[contribution.pk]), {"direction": "in", "amount": "82640", "date": "2026-10-05", "source": "", "member": ""})
+
+    contribution = goal.contributions.get()
+    assert (contribution.amount, contribution.in_currency) == (Decimal("82640"), "UAH")
+    assert goal.get_saved() == Decimal("2000.00")
+
+
+def test_delete_contribution_removes_transfer(yura_client, home, mono):
+    goal = Goal.objects.create(household=home, name="Відпустка", target_amount=Decimal("60000"))
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "3000", "date": "2026-10-25", "source": mono.pk, "member": ""})
+
+    yura_client.post(reverse("goals:contribution_delete", args=[goal.contributions.get().pk]))
+
+    assert not goal.contributions.exists()
+    assert not home.transactions.exists()
+    assert mono.get_balance() == Decimal("1000")
+
+
+def test_cannot_edit_contribution_of_other_family(yura_client, user):
+    stranger = create_household(user, "Чужий дім")
+    goal = Goal.objects.create(household=stranger, name="Чужа", target_amount=Decimal("100"))
+    contribution = GoalContribution.objects.create(goal=goal, amount=Decimal("10"))
+
+    assert yura_client.get(reverse("goals:contribution_edit", args=[contribution.pk])).status_code == 404
+    assert yura_client.post(reverse("goals:contribution_delete", args=[contribution.pk])).status_code == 404
+    assert GoalContribution.objects.filter(pk=contribution.pk).exists()

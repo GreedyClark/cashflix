@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.utils.translation import gettext as _
 
@@ -25,6 +25,12 @@ def convert_rate(currency, base_currency, on_date):
     if currency == base_currency:
         return Decimal("1")
     return uah_rate(currency, on_date) / uah_rate(base_currency, on_date)
+
+def convert_amount(amount, source, target, on_date):
+    if source == target:
+        return amount
+    return (amount * convert_rate(source, target, on_date)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
 
 def latest_rate(currency, on_date):
     from .models import ExchangeRate

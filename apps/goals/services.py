@@ -1,11 +1,11 @@
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.db import transaction as db_transaction
 from django.db.models import Max
 
 from apps.money.accounts import load_accounts
-from apps.money.models import CENT, Account, Transaction
-from apps.money.rates import convert_rate
+from apps.money.models import Account, Transaction
+from apps.money.rates import convert_amount as convert
 
 from .models import GoalContribution
 
@@ -24,17 +24,26 @@ def account_values(household, today, goals):
     return values
 
 
+def contributions_saved(goals):
+    manual = {goal.pk: goal for goal in goals if not goal.tracks_account}
+    totals = {}
+    for contribution in GoalContribution.objects.filter(goal__in=manual):
+        contribution.goal = manual[contribution.goal_id]
+        totals[contribution.goal_id] = totals.get(contribution.goal_id, ZERO) + contribution.in_goal_currency()
+    return totals
+
+
 def goal_items(household, today, archived=False):
     goals = list(
         household.goals.filter(is_archived=archived)
         .select_related("account", "household")
-        .with_saved()
         .annotate(last_date=Max("contributions__date"))
     )
     values = account_values(household, today, goals)
+    contributed = contributions_saved(goals)
     items = []
     for goal in goals:
-        saved = values.get(goal.account_id, ZERO) if goal.tracks_account else goal.saved
+        saved = values.get(goal.account_id, ZERO) if goal.tracks_account else contributed.get(goal.pk, ZERO)
         items.append({
             "goal": goal,
             "saved": saved,
@@ -50,12 +59,6 @@ def goal_items(household, today, archived=False):
 
 LIVE = (Account.Kind.CARD, Account.Kind.CASH)
 TYPICAL_MONTHS = 3
-
-
-def convert(amount, source, target, on_date):
-    if source == target:
-        return amount
-    return (amount * convert_rate(source, target, on_date)).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 def reserve_account(household, currency):
@@ -84,8 +87,9 @@ def move(household, source, target, amount_in_target, on_date, member, title):
 
 
 @db_transaction.atomic
-def contribute(goal, *, amount, taking, on_date, member, note="", source=None):
+def contribute(goal, *, amount, taking, on_date, member, note="", source=None, currency=None):
     household = goal.household
+    currency = currency or goal.currency
     title = f"{'З цілі' if taking else 'У ціль'}: {goal.name}"
     if goal.tracks_account:
         if taking:
@@ -93,14 +97,23 @@ def contribute(goal, *, amount, taking, on_date, member, note="", source=None):
         return move(household, source, goal.account, amount, on_date, member, title)
     transfer = None
     if source:
-        reserve = reserve_account(household, goal.currency)
+        reserve = reserve_account(household, currency)
         if taking:
-            transfer = move(household, reserve, source, convert(amount, goal.currency, source.currency, on_date), on_date, member, title)
+            transfer = move(household, reserve, source, convert(amount, currency, source.currency, on_date), on_date, member, title)
         else:
             transfer = move(household, source, reserve, amount, on_date, member, title)
     return GoalContribution.objects.create(
-        goal=goal, date=on_date, amount=-amount if taking else amount, member=member, note=note, transaction=transfer
+        goal=goal, date=on_date, amount=-amount if taking else amount, member=member, note=note,
+        transaction=transfer, currency="" if currency == household.base_currency else currency,
     )
+
+
+@db_transaction.atomic
+def remove_contribution(contribution):
+    if contribution.transaction_id:
+        contribution.transaction.delete()
+    else:
+        contribution.delete()
 
 
 def moved_to_savings(household, start, end, member=None):
@@ -134,7 +147,7 @@ def goal_saved_in(household, period, today):
         goal__household=household, date__gte=period.start, date__lte=period.end
     ).select_related("goal__account", "goal__household")
     for contribution in contributions:
-        total += convert(contribution.amount, contribution.goal.currency, household.base_currency, today)
+        total += convert(contribution.amount, contribution.in_currency, household.base_currency, today)
     goal_accounts = household.goals.filter(is_archived=False, account__isnull=False).values_list("account", flat=True)
     transfers = household.transactions.filter(
         type=Transaction.Type.TRANSFER, date__gte=period.start, date__lte=period.end, account__kind__in=LIVE

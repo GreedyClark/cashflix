@@ -1,8 +1,8 @@
 {% load i18n money %}
-<form class="tx-form contribution-form" novalidate hx-post="{% url 'goals:contribution_create' goal.pk %}" hx-target="#tx-dialog-body">
+<form class="tx-form contribution-form" novalidate hx-post="{% if contribution %}{% url 'goals:contribution_edit' contribution.pk %}{% else %}{% url 'goals:contribution_create' goal.pk %}{% endif %}" hx-target="#tx-dialog-body">
   {% csrf_token %}
   <div class="sheet-head">
-    <h2>{{ goal.name }}</h2>
+    <h2>{% if contribution %}{% translate "Змінити внесок" %}{% else %}{{ goal.name }}{% endif %}</h2>
     <button class="icon-btn ghost" type="button" data-dialog-close aria-label="{% translate 'Закрити' %}"><c-icon name="x" /></button>
   </div>
 
@@ -15,7 +15,7 @@
       <label class="amount-field">
         <input class="amount-input num" type="text" name="amount" value="{{ form.amount.value|default_if_none:'' }}"
                inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума' %}" autofocus>
-        <span class="amount-cur static">{% if goal.currency == "USD" %}${% elif goal.currency == "EUR" %}€{% else %}₴{% endif %}</span>
+        <span class="amount-cur static">{% if currency == "USD" %}${% elif currency == "EUR" %}€{% else %}₴{% endif %}</span>
       </label>
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
@@ -37,7 +37,7 @@
         {% else %}
           {% translate "Сума спишеться з картки на рахунок «Відкладено на цілі», тож її не буде видно як вільні гроші. «Лише записати» — якщо гроші вже лежать окремо." %}
         {% endif %}
-        {% if goal.currency != request.household.base_currency %}{% translate "Сума в валюті цілі, з гривневої картки спишеться за курсом НБУ на дату." %}{% endif %}
+        {% if currency != request.household.base_currency %}{% translate "Сума в валюті цілі, з гривневої картки спишеться за курсом НБУ на дату." %}{% endif %}
       </p>
     </fieldset>
 
@@ -66,12 +66,12 @@
 
     {% if history %}
       <div class="field-cf">
-        <span class="f-label">{% translate "Останні внески" %}</span>
+        <span class="f-label">{% translate "Останні внески" %} <small>{% translate "натисніть, щоб змінити" %}</small></span>
         <ul class="goal-history">
           {% for item in history %}
-            <li>
+            <li hx-get="{% url 'goals:contribution_edit' item.pk %}" hx-target="#tx-dialog-body" tabindex="0" title="{% translate 'Змінити' %}">
               <span>{{ item.date|date:"j E" }}{% if item.member %} · {{ item.member.user.name }}{% endif %}{% if item.transaction %} · {% if item.amount > 0 %}{{ item.transaction.account.name }}{% else %}{{ item.transaction.to_account.name }}{% endif %}{% endif %}{% if item.note %} · {{ item.note }}{% endif %}</span>
-              <b class="num{% if item.amount > 0 %} plus{% endif %}">{% if item.amount > 0 %}+{% endif %}{{ item.amount|money:goal.currency }}</b>
+              <b class="num{% if item.amount > 0 %} plus{% endif %}">{% if item.amount > 0 %}+{% endif %}{{ item.amount|money:item.in_currency }}</b>
             </li>
           {% endfor %}
         </ul>
@@ -80,6 +80,13 @@
   </div>
 
   <div class="sheet-foot">
-    <button class="btn-cf primary wide" type="submit">{% translate "Записати" %}</button>
+    {% if contribution %}
+      <button class="btn-cf ghost-danger" type="button" hx-post="{% url 'goals:contribution_delete' contribution.pk %}" hx-swap="none"><c-icon name="trash" />{% translate "Видалити" %}</button>
+      <span class="sheet-foot-space"></span>
+      <button class="btn-cf" type="button" hx-get="{% url 'goals:contribution_create' goal.pk %}" hx-target="#tx-dialog-body">{% translate "Назад" %}</button>
+      <button class="btn-cf primary" type="submit">{% translate "Зберегти" %}</button>
+    {% else %}
+      <button class="btn-cf primary wide" type="submit">{% translate "Записати" %}</button>
+    {% endif %}
   </div>
 </form>

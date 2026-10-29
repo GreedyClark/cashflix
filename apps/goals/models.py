@@ -8,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from apps.households.models import Currency, Household, Membership
 from apps.money.models import CENT, MONEY, Account
+from apps.money.rates import RateNotFound, convert_amount
 
 
 class GoalQuerySet(models.QuerySet):
@@ -67,7 +68,10 @@ class Goal(models.Model):
         return self.currency_code or self.household.base_currency
 
     def get_saved(self):
-        return self.contributions.aggregate(total=Coalesce(Sum("amount"), Decimal("0")))["total"]
+        contributions = self.contributions.all()
+        for contribution in contributions:
+            contribution.goal = self
+        return sum((contribution.in_goal_currency() for contribution in contributions), Decimal("0"))
 
     @staticmethod
     def months_between(start, end):
@@ -105,6 +109,9 @@ class GoalContribution(models.Model):
         verbose_name=_("хто"),
     )
     note = models.CharField(_("нотатка"), max_length=200, blank=True)
+    currency = models.CharField(
+        _("валюта"), max_length=3, choices=Currency.choices, blank=True, help_text=_("Порожньо — основна валюта сім'ї")
+    )
     transaction = models.OneToOneField(
         "money.Transaction",
         on_delete=models.CASCADE,
@@ -121,3 +128,13 @@ class GoalContribution(models.Model):
 
     def __str__(self):
         return f"{self.goal}: {self.amount}"
+
+    @property
+    def in_currency(self):
+        return self.currency or self.goal.household.base_currency
+
+    def in_goal_currency(self):
+        try:
+            return convert_amount(self.amount, self.in_currency, self.goal.currency, self.date)
+        except RateNotFound:
+            return self.amount

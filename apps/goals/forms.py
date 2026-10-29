@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django import forms
+from django.db import transaction as db_transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -12,7 +13,7 @@ from apps.households.models import Currency
 from apps.money.models import Account
 
 from .models import Goal
-from .services import LIVE, contribute
+from .services import LIVE, contribute, remove_contribution
 
 ACCOUNT = "account"
 MANUAL = "manual"
@@ -122,10 +123,14 @@ class ContributionForm(forms.Form):
         widget=forms.TextInput(attrs={"placeholder": _("Нотатка, необов'язково"), "autocomplete": "off"}),
     )
 
-    def __init__(self, *args, goal, membership=None, **kwargs):
+    def __init__(self, *args, goal, membership=None, contribution=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.goal = goal
+        self.contribution = contribution
+        self.currency = contribution.in_currency if contribution else goal.currency
         household = goal.household
+        if contribution:
+            self.prefill(contribution)
         self.fields["member"].queryset = household.memberships.active().select_related("user")
         live = household.accounts.filter(is_archived=False, kind__in=LIVE)
         if goal.account_id:
@@ -137,6 +142,21 @@ class ContributionForm(forms.Form):
             mine = live.filter(owner=membership, kind=Account.Kind.CARD).first()
             if mine or goal.tracks_account:
                 self.initial.setdefault("source", (mine or live.first()).pk if (mine or live.first()) else None)
+
+    def prefill(self, contribution):
+        transfer = contribution.transaction
+        taking = contribution.amount < 0
+        source = None
+        if transfer:
+            source = transfer.to_account_id if taking else transfer.account_id
+        self.initial.update({
+            "direction": self.OUT if taking else self.IN,
+            "amount": format_amount(abs(contribution.amount)),
+            "date": contribution.date,
+            "source": source,
+            "member": contribution.member_id,
+            "note": contribution.note,
+        })
 
     def member_options(self):
         selected = str(self["member"].value() or "")
@@ -152,8 +172,11 @@ class ContributionForm(forms.Form):
             self.add_error("source", _("Оберіть рахунок, з якого відкладаєте."))
         return cleaned
 
+    @db_transaction.atomic
     def save(self):
         data = self.cleaned_data
+        if self.contribution:
+            remove_contribution(self.contribution)
         return contribute(
             self.goal,
             amount=data["amount"],
@@ -162,4 +185,5 @@ class ContributionForm(forms.Form):
             member=data.get("member"),
             note=data.get("note", ""),
             source=data.get("source"),
+            currency=self.currency,
         )

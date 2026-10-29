@@ -10,7 +10,8 @@ from apps.money.icon_catalog import choices
 from apps.money.rates import RateNotFound
 
 from .forms import ContributionForm, GoalForm
-from .services import goal_items, month_plan
+from .models import GoalContribution
+from .services import goal_items, month_plan, remove_contribution
 
 CHANGED = ("goalsChanged", "closeModal")
 MOVED = ("goalsChanged", "accountsChanged", "transactionsChanged", "closeModal")
@@ -70,20 +71,46 @@ def goal_delete(request, pk):
     return toast_response(request, _("Ціль видалено"), events=CHANGED)
 
 
-def contribution_create(request, pk):
-    goal = get_object_or_404(request.household.goals.select_related("account", "household"), pk=pk)
-    form = ContributionForm(request.POST or None, goal=goal, membership=request.membership)
+def contribution_form(request, goal, contribution=None):
+    form = ContributionForm(request.POST or None, goal=goal, membership=request.membership, contribution=contribution)
     if request.method == "POST" and form.is_valid():
         try:
             form.save()
         except RateNotFound:
             form.add_error("amount", _("Немає курсу валюти на цю дату. Спробуйте пізніше."))
         else:
-            taking = form.cleaned_data["direction"] == form.OUT
-            message = _("Записано, що взяли з цілі") if taking else _("Відкладено в ціль")
+            if contribution:
+                message = _("Внесок змінено")
+            elif form.cleaned_data["direction"] == form.OUT:
+                message = _("Записано, що взяли з цілі")
+            else:
+                message = _("Відкладено в ціль")
             return toast_response(request, message, events=MOVED)
-    if goal.tracks_account:
-        history = []
-    else:
-        history = goal.contributions.select_related("member__user", "transaction__account", "transaction__to_account")[:5]
-    return render(request, "goals/_contribution_form.html", {"form": form, "goal": goal, "history": history})
+    history = []
+    if not goal.tracks_account and contribution is None:
+        history = goal.contributions.select_related("goal__household", "member__user", "transaction__account", "transaction__to_account")[:8]
+    context = {"form": form, "goal": goal, "contribution": contribution, "history": history, "currency": form.currency}
+    return render(request, "goals/_contribution_form.html", context)
+
+
+def contribution_create(request, pk):
+    goal = get_object_or_404(request.household.goals.select_related("account", "household"), pk=pk)
+    return contribution_form(request, goal)
+
+
+def household_contribution(request, pk):
+    return get_object_or_404(
+        GoalContribution.objects.select_related("goal__account", "goal__household", "transaction"),
+        pk=pk, goal__household=request.household, goal__account__isnull=True,
+    )
+
+
+def contribution_edit(request, pk):
+    contribution = household_contribution(request, pk)
+    return contribution_form(request, contribution.goal, contribution)
+
+
+@require_POST
+def contribution_delete(request, pk):
+    remove_contribution(household_contribution(request, pk))
+    return toast_response(request, _("Внесок видалено"), events=MOVED)
