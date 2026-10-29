@@ -109,3 +109,27 @@ def test_savings_forecast_counts_expected_salary(home, mono, food, salary, yura)
 
 def test_no_savings_forecast_in_first_days(home, october):
     assert Overview(home, today=datetime.date(2026, 10, 3)).kpis()["savings"] is None
+
+
+def test_one_big_purchase_is_not_repeated_in_forecast(home, mono, food):
+    add(home, mono, "300", datetime.date(2026, 10, 2), category=food)
+    add(home, mono, "300", datetime.date(2026, 10, 3), category=food)
+    add(home, mono, "30000", datetime.date(2026, 10, 4), category=food)
+
+    overview = Overview(home, today=TODAY)
+
+    assert overview.daily_pace == Decimal("150")
+    assert overview.forecast_total == Decimal("30600") + Decimal("150") * 21
+
+
+def test_personal_view_skips_shared_payments_and_accounts(home, mono, food, yura):
+    mono.owner = None
+    mono.save()
+    RecurringPayment.objects.create(household=home, title="Квартира", amount=Decimal("12000"), account=mono, category=food, start_date=datetime.date(2026, 10, 28))
+    RecurringPayment.objects.create(household=home, title="Спортзал", amount=Decimal("900"), account=mono, category=food, member=yura, start_date=datetime.date(2026, 10, 28))
+
+    overview = Overview(home, member=yura, today=TODAY)
+
+    assert overview.recurring_left == Decimal("900")
+    assert [p.title for p in overview.upcoming(days=30)] == ["Спортзал"]
+    assert overview.kpis()["live"] == Decimal("0")

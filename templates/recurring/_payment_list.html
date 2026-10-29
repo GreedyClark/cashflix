@@ -11,12 +11,12 @@
       <div>
         <p class="eyebrow">{% translate "Частка доходу" %}</p>
         <div class="bud-value num">{% if share is not None %}{{ share }}%{% else %}—{% endif %}</div>
-        <span class="bud-hint">{% if income %}{% blocktranslate with amount=income|money:currency %}від середнього доходу {{ amount }}{% endblocktranslate %}{% else %}{% translate "доходів за 3 місяці ще немає" %}{% endif %}</span>
+        <span class="bud-hint">{% if income and income_this_month %}{% blocktranslate with amount=income|money:currency %}від доходу цього місяця {{ amount }}{% endblocktranslate %}{% elif income %}{% blocktranslate with amount=income|money:currency %}від середнього доходу {{ amount }}{% endblocktranslate %}{% else %}{% translate "доходів ще немає" %}{% endif %}</span>
       </div>
       <div>
         <p class="eyebrow">{% translate "Ще до кінця місяця" %}</p>
         <div class="bud-value num">{{ left_this_month|money:currency }}</div>
-        <span class="bud-hint">{% translate "заплановані списання з сьогодні" %}</span>
+        <span class="bud-hint">{% blocktranslate with end=period.end|date:"j E" %}заплановані списання до {{ end }}{% endblocktranslate %}</span>
       </div>
     </div>
     {% if share is not None %}

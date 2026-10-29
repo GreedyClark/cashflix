@@ -147,3 +147,15 @@ def test_overview_shows_upcoming(yura_client, home, mono, home_subs):
     response = yura_client.get(reverse("core:home"))
 
     assert [p.title for p in response.context["upcoming"]] == ["Завтра"]
+
+
+def test_left_this_month_follows_budget_month(yura_client, home, mono, home_subs):
+    home.month_start_day = 20
+    home.save()
+    period = home.period(timezone.localdate())
+    payment(home, mono, home_subs, title="Квартира", amount=Decimal("12000"), start_date=period.end)
+    payment(home, mono, home_subs, title="Наступного місяця", amount=Decimal("500"), start_date=period.end + datetime.timedelta(days=1))
+
+    response = yura_client.get(reverse("recurring:payments"))
+
+    assert response.context["left_this_month"] == Decimal("12000")

@@ -14,6 +14,7 @@ from apps.money.models import Transaction
 from apps.recurring.services import in_base, occurrences
 
 ZERO = Decimal("0")
+ONE_OFF = 3
 
 
 def percent_change(now, before):
@@ -93,7 +94,7 @@ class Overview:
     def recurring_left(self):
         payments = self.household.recurring_payments.filter(is_active=True, type=Transaction.Type.EXPENSE)
         if self.member:
-            payments = payments.filter(Q(member=self.member) | Q(member__isnull=True))
+            payments = payments.filter(member=self.member)
         total = ZERO
         for payment in payments.select_related("account", "household"):
             dates = occurrences(payment, self.today, self.period.end)
@@ -102,10 +103,18 @@ class Overview:
         return total
 
     @cached_property
+    def daily_pace(self):
+        regular = by_day(self.this_month.expenses().exclude(source=Transaction.Source.RECURRING))
+        days = [amount for amount in regular.values() if amount > 0]
+        if not days:
+            return ZERO
+        ordered = sorted(days)
+        cap = ordered[len(ordered) // 2] * ONE_OFF
+        return sum((min(amount, cap) for amount in days), ZERO) / self.day
+
+    @cached_property
     def forecast_total(self):
-        regular = self.this_month.expenses().exclude(source=Transaction.Source.RECURRING).total_base()
-        pace = regular / self.day
-        return self.spent + pace * (self.days_in_month - self.day) + self.recurring_left
+        return self.spent + self.daily_pace * (self.days_in_month - self.day) + self.recurring_left
 
     @cached_property
     def expected_income(self):
@@ -140,7 +149,10 @@ class Overview:
 
     @cached_property
     def accounts(self):
-        return load_accounts(self.household, self.today)
+        accounts = load_accounts(self.household, self.today)
+        if self.member:
+            return [account for account in accounts if account.owner_id == self.member.pk]
+        return accounts
 
     @cached_property
     def total_balance(self):
@@ -235,7 +247,7 @@ class Overview:
         end = self.today + timedelta(days=days)
         payments = self.household.recurring_payments.filter(is_active=True, next_date__lte=end)
         if self.member:
-            payments = payments.filter(Q(member=self.member) | Q(member__isnull=True))
+            payments = payments.filter(member=self.member)
         payments = payments.select_related("account", "category").order_by("next_date")
         for payment in payments:
             payment.days_left = (payment.next_date - self.today).days

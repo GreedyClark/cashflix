@@ -17,6 +17,11 @@
           <button class="btn-cf sm" type="button" hx-post="{% url 'money:transaction_not_duplicate' transaction.pk %}" hx-swap="none">{% translate "Це різні" %}</button>
         </div>
       </div>
+    {% elif form.saving_warning %}
+      <div class="notice-cf warn">
+        <p>{% translate "Схоже на купівлю валюти або відкладення. Це не витрата: гроші лишаються вашими. Оберіть «Переказ» і рахунок, куди вони пішли, наприклад валютний або накопичувальний. Тоді прогноз і «Лишилось на місяць» рахуватимуть правильно." %}</p>
+        <label class="check-cf"><input type="checkbox" name="keep_expense">{% translate "Все одно записати як витрату" %}</label>
+      </div>
     {% elif maybe_transfer %}
       <div class="notice-cf warn">
         <p>{% translate "Схоже на переказ між вашими рахунками. Якщо так, оберіть «Переказ» і рахунок зарахування: тоді це не буде ні витратою, ні доходом, а друга половина переказу з'єднається сама." %}</p>

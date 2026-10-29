@@ -1,4 +1,5 @@
 import datetime
+import re
 from decimal import Decimal
 
 from django import forms
@@ -7,6 +8,15 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .models import Account, AccountValuation, Category, Transaction
+
+SAVING_TITLE = re.compile(r"купівл\w*\s+(валют|долар|євро|злот|usd|eur)|обмін\w*\s+валют|заощадж|накопич|відклад", re.IGNORECASE)
+SAVING_CATEGORY = re.compile(r"заощадж|накопич|відклад", re.IGNORECASE)
+
+
+def looks_like_saving(title, category):
+    if title and SAVING_TITLE.search(title):
+        return True
+    return bool(category and SAVING_CATEGORY.search(category.name))
 
 
 def month_start(value):
@@ -175,6 +185,7 @@ class TransactionForm(forms.ModelForm):
     to_amount = AmountField(label=_("Зараховано"), required=False, min_value=Decimal("0.01"))
     member = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
     is_refund = forms.BooleanField(required=False)
+    keep_expense = forms.BooleanField(required=False)
 
     class Meta:
         model = Transaction
@@ -193,6 +204,7 @@ class TransactionForm(forms.ModelForm):
     def __init__(self, *args, household, membership, **kwargs):
         super().__init__(*args, **kwargs)
         self.instance.household = household
+        self.saving_warning = False
         current = Q(pk=self.instance.category_id) if self.instance.category_id else Q(pk__in=[])
         self.fields["category"].queryset = household.categories.filter(Q(is_archived=False) | current)
         self.fields["account"].queryset = household.accounts.filter(is_archived=False)
@@ -239,6 +251,15 @@ class TransactionForm(forms.ModelForm):
                 self.add_error("category", _("Оберіть категорію або вкажіть назву."))
         elif not cleaned.get("title") and "title" not in self.errors:
             self.add_error("title", self.Meta.error_messages["title"]["required"])
+
+        self.saving_warning = (
+            cleaned.get("type") == Transaction.Type.EXPENSE
+            and not cleaned.get("keep_expense")
+            and {"type", "title", "category"} & set(self.changed_data)
+            and looks_like_saving(cleaned.get("title"), category)
+        )
+        if self.saving_warning:
+            self.add_error(None, _("Схоже на купівлю валюти або відкладення: дивіться підказку вгорі."))
 
         if cleaned.get("type") == Transaction.Type.TRANSFER:
             cleaned["category"] = None

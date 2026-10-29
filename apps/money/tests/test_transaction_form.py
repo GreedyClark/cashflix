@@ -172,3 +172,14 @@ def test_converting_to_transfer_absorbs_other_half(yura_client, home, mono, cash
 
     tx = home.transactions.get()
     assert (tx.type, tx.to_account) == ("transfer", cash)
+
+
+def test_buying_dollars_as_expense_asks_for_transfer(yura_client, home, mono, food):
+    response = yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=food.pk, title="купівля доларів", amount="41283"))
+
+    assert "Все одно записати як витрату" in response.content.decode()
+    assert not home.transactions.exists()
+
+    yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=food.pk, title="купівля доларів", amount="41283", keep_expense="on"))
+
+    assert home.transactions.get().type == "expense"

@@ -7,10 +7,9 @@ from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
-from apps.budgets.summary import month_end
+from apps.budgets.income import MonthIncome
 from apps.core.htmx import toast_response
 from apps.money.models import Transaction
-from apps.recurring.dates import add_months
 
 from .forms import PayForm, PaymentForm
 from .services import in_base, monthly_amount, occurrences, pay_now
@@ -32,17 +31,22 @@ def group_for(payment, today, week_end, end_of_month):
     return "later"
 
 
-def average_income(household, today):
-    first = add_months(today.replace(day=1), -3)
-    last = today.replace(day=1) - datetime.timedelta(days=1)
-    return household.transactions.incomes().between(first, last).total_base() / 3
+def average_income(household, period):
+    totals = []
+    for offset in range(1, 4):
+        start, end = period.shift(-offset).income_range()
+        total = household.transactions.incomes().between(start, end).total_base()
+        if total:
+            totals.append(total)
+    return sum(totals, ZERO) / len(totals) if totals else ZERO
 
 
 def payment_list(request):
     household = request.household
     today = timezone.localdate()
     week_end = today + datetime.timedelta(days=7)
-    end_of_month = month_end(today)
+    period = household.period(today)
+    end_of_month = period.end
     payments = household.recurring_payments.select_related("account", "category", "member__user", "household")
 
     groups = {key: [] for key in ("overdue", "week", "month", "later", "paused")}
@@ -57,7 +61,10 @@ def payment_list(request):
         upcoming = occurrences(payment, today, end_of_month)
         left_this_month += (in_base(payment, payment.amount, today) or ZERO) * len(upcoming)
 
-    income = average_income(household, today)
+    income = average_income(household, period)
+    this_month = not income
+    if this_month:
+        income = MonthIncome(household, period, today).family.total
     share = round(monthly / income * 100) if income else None
     titles = {
         "overdue": _("Пропущені"),
@@ -71,6 +78,8 @@ def payment_list(request):
         "monthly": monthly,
         "left_this_month": left_this_month,
         "income": income,
+        "income_this_month": this_month,
+        "period": period,
         "share": share,
         "share_bar": min(100, share or 0),
         "count": sum(1 for p in payments if p.is_active),
