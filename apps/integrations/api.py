@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib.auth.decorators import login_not_required
 from django.db import transaction as db_transaction
@@ -11,9 +12,11 @@ from apps.money.models import Transaction
 from apps.money.rates import RateNotFound
 
 from . import wallet
-from .models import MonobankAccount, MonobankConnection, ShortcutToken
+from .models import MonobankAccount, MonobankConnection, ShortcutAttempt, ShortcutToken
 from .parsing import BadPayload, parse_amount, parse_moment
 from .sync import minor, process_item, reconcile
+
+log = logging.getLogger(__name__)
 
 MESSAGES = {
     "amount": "Не вдалося прочитати суму.",
@@ -47,7 +50,21 @@ def shortcut(request):
 
     token = ShortcutToken.objects.find(read_token(request, payload))
     if token is None:
+        log.info("Shortcut: wrong token")
         return JsonResponse({"status": "error", "error": "token", "message": "Невірний токен."}, status=401)
+    try:
+        response = process(token, payload)
+    except Exception:
+        log.exception("Shortcut failed")
+        ShortcutAttempt.record(token.membership, payload, 500, "error", "Помилка на сервері")
+        raise
+    data = json.loads(response.content)
+    ShortcutAttempt.record(token.membership, payload, response.status_code, data.get("status", ""), data.get("message", ""))
+    log.info("Shortcut: %s %s %s", token.prefix, response.status_code, data.get("status"))
+    return response
+
+
+def process(token, payload):
     membership = token.membership
     household = membership.household
 
@@ -140,7 +157,7 @@ def monobank_webhook(request, secret):
         with db_transaction.atomic():
             status = process_item(mono_account, item)
             if item.get("balance") is not None:
-                mono_account.balance = minor(item["balance"])
+                mono_account.balance = mono_account.own_money(minor(item["balance"]))
                 mono_account.save(update_fields=["balance"])
                 reconcile(mono_account, mono_account.balance)
     except RateNotFound:

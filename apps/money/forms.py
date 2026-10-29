@@ -174,6 +174,7 @@ class TransactionForm(forms.ModelForm):
     )
     to_amount = AmountField(label=_("Зараховано"), required=False, min_value=Decimal("0.01"))
     member = forms.ModelChoiceField(queryset=None, required=False, empty_label=None)
+    is_refund = forms.BooleanField(required=False)
 
     class Meta:
         model = Transaction
@@ -202,7 +203,8 @@ class TransactionForm(forms.ModelForm):
         self.fields["title"].required = False
 
         if self.instance.pk:
-            self.initial["amount"] = format_amount(self.instance.amount)
+            self.initial["amount"] = format_amount(abs(self.instance.amount))
+            self.initial["is_refund"] = self.instance.is_refund
             self.initial["when"] = when_for(self.instance.date)
             if self.instance.to_amount and self.instance.to_amount != self.instance.amount:
                 self.initial["to_amount"] = format_amount(self.instance.to_amount)
@@ -250,6 +252,8 @@ class TransactionForm(forms.ModelForm):
     def save(self, commit=True):
         if self.instance.pk and {"date", "account"} & set(self.changed_data):
             self.instance.rate = None
+        refund = self.cleaned_data.get("is_refund") and self.instance.type == Transaction.Type.EXPENSE
+        self.instance.amount = -abs(self.instance.amount) if refund else abs(self.instance.amount)
         return super().save(commit)
 
     def category_options(self):

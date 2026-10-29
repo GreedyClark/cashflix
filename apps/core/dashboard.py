@@ -8,8 +8,10 @@ from django.utils import formats, timezone
 from apps.budgets.income import MonthIncome
 from apps.budgets.models import Limit
 from apps.budgets.summary import limit_item
-from apps.goals.services import goal_items
+from apps.goals.services import LIVE, goal_items, moved_to_savings
 from apps.money.accounts import load_accounts
+from apps.money.models import Transaction
+from apps.recurring.services import in_base, occurrences
 
 ZERO = Decimal("0")
 
@@ -79,11 +81,45 @@ class Overview:
         until = min(previous_start + (self.today - start), previous_end)
         return self.transactions.incomes().between(previous_start, until).total_base()
 
+    @cached_property
+    def saved(self):
+        return moved_to_savings(self.household, self.month, self.today, self.member)
+
+    @cached_property
+    def left(self):
+        return self.earned - self.spent - self.saved
+
+    @cached_property
+    def recurring_left(self):
+        payments = self.household.recurring_payments.filter(is_active=True, type=Transaction.Type.EXPENSE)
+        if self.member:
+            payments = payments.filter(Q(member=self.member) | Q(member__isnull=True))
+        total = ZERO
+        for payment in payments.select_related("account", "household"):
+            dates = occurrences(payment, self.today, self.period.end)
+            if dates:
+                total += (in_base(payment, payment.amount, self.today) or ZERO) * len(dates)
+        return total
+
+    @cached_property
+    def forecast_total(self):
+        regular = self.this_month.expenses().exclude(source=Transaction.Source.RECURRING).total_base()
+        pace = regular / self.day
+        return self.spent + pace * (self.days_in_month - self.day) + self.recurring_left
+
+    @cached_property
+    def live_money(self):
+        return sum((a.converted for a in self.accounts if a.converted is not None and a.kind in LIVE), ZERO)
+
     def kpis(self):
         before = self.same_period_last_month()
-        forecast = self.spent / self.day * self.days_in_month
+        forecast = self.forecast_total
         savings = round((self.earned - forecast) / self.earned * 100) if self.earned else None
         return {
+            "left": self.left,
+            "saved": self.saved,
+            "live": self.live_money,
+            "capital": self.total_balance,
             "balance": self.total_balance,
             "earned": self.earned,
             "earned_change": percent_change(self.earned, self.earned_last_month()),
@@ -108,16 +144,19 @@ class Overview:
         previous = (previous + previous[-1:] * self.days_in_month)[: self.days_in_month]
 
         per_day = self.spent / self.day
+        remaining_days = self.days_in_month - self.day
+        step = (self.forecast_total - self.spent) / remaining_days if remaining_days else ZERO
         forecast = [None] * (self.day - 1) + [self.spent]
-        forecast += [per_day * number for number in range(self.day + 1, self.days_in_month + 1)]
+        forecast += [self.spent + step * number for number in range(1, remaining_days + 1)]
 
         biggest = max(self.spent_by_day.items(), key=lambda item: item[1], default=None)
         days_left = self.days_in_month - self.day + 1
-        room = self.earned - self.spent
+        room = self.left - self.recurring_left
         return {
             "total": self.spent,
             "change": percent_change(self.spent, self.same_period_last_month().expenses().total_base()),
-            "forecast": per_day * self.days_in_month,
+            "forecast": self.forecast_total,
+            "recurring_left": self.recurring_left,
             "per_day": per_day,
             "biggest_day": biggest,
             "room": room,
@@ -217,11 +256,12 @@ class Overview:
         }
 
     def balance_by_day(self):
-        incomes = by_day(self.this_month.incomes())
+        incomes = by_day(incomes_of(self.transactions, self.period, self.today))
         net = {date: incomes.get(date, ZERO) - self.spent_by_day.get(date, ZERO) for date in {*incomes, *self.spent_by_day}}
-        changes = running_total(net, self.month, self.day)
-        start = self.total_balance - (changes[-1] if changes else ZERO)
-        return [start + change for change in changes]
+        if self.period.income_range()[0] < self.month:
+            early = sum((amount for date, amount in incomes.items() if date < self.month), ZERO)
+            net[self.month] = net.get(self.month, ZERO) + early
+        return running_total(net, self.month, self.day)
 
 
 def by_category(queryset):

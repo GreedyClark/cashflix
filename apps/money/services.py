@@ -1,6 +1,8 @@
+import datetime
+
 from django.db import transaction
 
-from .models import Category
+from .models import Category, Transaction
 
 DEFAULT_EXPENSE_CATEGORIES = [
     ("Продукти", "shopping-cart", 1),
@@ -78,3 +80,28 @@ def merge_categories(source, target):
             limit.save(update_fields=["category"])
     source.delete()
     return moved
+
+
+TRANSFER_WORDS = ("переказ", "з картки", "на картку", "від:", "поповнення", "transfer")
+PAIR_WINDOW = datetime.timedelta(days=2)
+
+
+def looks_like_transfer(operation):
+    title = (operation.title or "").lower()
+    return any(word in title for word in TRANSFER_WORDS)
+
+
+def absorb_halves(transfer):
+    window = (transfer.date - PAIR_WINDOW, transfer.date + PAIR_WINDOW)
+    candidates = Transaction.objects.filter(household=transfer.household, date__range=window).exclude(pk=transfer.pk)
+    halves = list(
+        candidates.filter(type=Transaction.Type.EXPENSE, account=transfer.account, amount=transfer.amount)
+    ) + list(
+        candidates.filter(type=Transaction.Type.INCOME, account=transfer.to_account, amount=transfer.to_amount)
+    )
+    removed = 0
+    for half in halves:
+        if half.needs_review or looks_like_transfer(half):
+            half.delete()
+            removed += 1
+    return removed

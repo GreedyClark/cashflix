@@ -18,10 +18,24 @@
       {% for error in form.target_amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
 
+    <div class="field-cf manual-only">
+      <div class="pill-row" role="radiogroup" aria-label="{% translate 'Валюта' %}">
+        {% for option in form.currency_options %}
+          <label class="pill-cf"><input type="radio" name="currency_code" value="{{ option.code }}"{% if option.checked %} checked{% endif %}>{% if option.code == "USD" %}${% elif option.code == "EUR" %}€{% else %}₴{% endif %} {{ option.code }}</label>
+        {% endfor %}
+      </div>
+    </div>
+
     <div class="field-cf{% if form.deadline.errors %} has-error{% endif %}">
       <label class="f-label" for="{{ form.deadline.id_for_label }}">{% translate "До коли, необов'язково" %}</label>
       {{ form.deadline }}
-      <p class="field-help">{% translate "З датою CashFlix порахує, скільки відкладати щомісяця." %}</p>
+      <p class="field-help">{% translate "З датою CashFlix сам порахує, скільки відкладати щомісяця." %}</p>
+    </div>
+
+    <div class="field-cf{% if form.monthly_amount.errors %} has-error{% endif %}">
+      <label class="f-label" for="goal-monthly">{% translate "Відкладати на місяць, якщо дати немає" %}</label>
+      <input class="field-cf-input" id="goal-monthly" type="text" name="monthly_amount" value="{{ form.monthly_amount.value|default_if_none:'' }}" inputmode="decimal" autocomplete="off" placeholder="{% translate 'Наприклад, 2 000' %}">
+      {% for error in form.monthly_amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
 
     <fieldset class="field-cf">

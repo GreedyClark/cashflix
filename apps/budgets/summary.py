@@ -94,6 +94,11 @@ def limit_item(limit, spent, income, pace=None, average=None):
     return item
 
 
+def not_overlapping(limits):
+    shared = {item["limit"].category_id for item in limits if item["limit"].is_shared}
+    return [item for item in limits if item["limit"].is_shared or item["limit"].category_id not in shared]
+
+
 class BudgetMonth:
     def __init__(self, household, period, today):
         self.household = household
@@ -138,9 +143,10 @@ class BudgetMonth:
         ]
 
     def summary(self, limits):
-        planned = sum((item["amount"] for item in limits), ZERO)
-        full = sum((item["full"] for item in limits), ZERO)
-        spent = sum((item["spent"] for item in limits), ZERO)
+        counted = not_overlapping(limits)
+        planned = sum((item["amount"] for item in counted), ZERO)
+        full = sum((item["full"] for item in counted), ZERO)
+        spent = sum((item["spent"] for item in counted), ZERO)
         left = planned - spent
         days_left = self.days_left
         return {

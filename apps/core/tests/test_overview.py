@@ -62,3 +62,39 @@ def test_other_family_member_param_is_ignored(client, yura, olya, user_household
     response = client.get(reverse("core:home"), {"member": stranger.pk})
 
     assert response.context["member"] is None
+
+
+def test_left_for_month_subtracts_savings(home, mono, food, salary):
+    import datetime
+    from decimal import Decimal
+
+    from apps.core.dashboard import Overview
+    from apps.money.models import Account, Transaction
+
+    jar = Account.objects.create(household=home, name="Банка", kind=Account.Kind.SAVINGS)
+    today = datetime.date(2026, 10, 20)
+    Transaction.objects.create(household=home, account=mono, category=salary, type="income", amount=Decimal("30000"), date=datetime.date(2026, 10, 2), title="ЗП")
+    Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("8000"), date=datetime.date(2026, 10, 5), title="x")
+    Transaction.objects.create(household=home, account=mono, to_account=jar, type="transfer", amount=Decimal("5000"), date=datetime.date(2026, 10, 6), title="У банку")
+
+    kpis = Overview(home, today=today).kpis()
+
+    assert (kpis["left"], kpis["saved"]) == (Decimal("17000"), Decimal("5000"))
+    assert kpis["live"] == Decimal("18000") and kpis["capital"] == Decimal("23000")
+
+
+def test_forecast_adds_unpaid_recurring(home, mono, food):
+    import datetime
+    from decimal import Decimal
+
+    from apps.core.dashboard import Overview
+    from apps.money.models import Transaction
+    from apps.recurring.models import RecurringPayment
+
+    today = datetime.date(2026, 10, 10)
+    Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("1000"), date=datetime.date(2026, 10, 5), title="x")
+    RecurringPayment.objects.create(household=home, title="Квартира", amount=Decimal("12000"), account=mono, category=food, start_date=datetime.date(2026, 10, 28))
+
+    overview = Overview(home, today=today)
+
+    assert overview.forecast_total == Decimal("1000") + Decimal("100") * 21 + Decimal("12000")

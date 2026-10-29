@@ -152,3 +152,23 @@ def test_income_without_title_and_category_asks_for_one(yura_client, home, mono)
 
     assert "Оберіть категорію або вкажіть назву." in response.content.decode()
     assert not home.transactions.exists()
+
+
+def test_refund_checkbox_stores_negative_expense(yura_client, home, mono, food):
+    yura_client.post(reverse("money:transaction_create"), payload(account=mono.pk, category=food.pk, amount="200", is_refund="on"))
+
+    tx = home.transactions.get()
+    assert (tx.amount, tx.is_refund) == (Decimal("-200.00"), True)
+    mono.refresh_from_db()
+    assert mono.get_balance() == Decimal("1200.00")
+
+
+def test_converting_to_transfer_absorbs_other_half(yura_client, home, mono, cash, food):
+    gifts = home.categories.get(kind="income", name="Подарунки")
+    out = Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("500"), title="Переказ на картку", date=datetime.date(2026, 10, 14))
+    Transaction.objects.create(household=home, account=cash, category=gifts, type="income", amount=Decimal("500"), title="Переказ з картки", date=datetime.date(2026, 10, 14))
+
+    yura_client.post(reverse("money:transaction_edit", args=[out.pk]), payload(type="transfer", account=mono.pk, to_account=cash.pk, title="Переказ на картку", amount="500"))
+
+    tx = home.transactions.get()
+    assert (tx.type, tx.to_account) == ("transfer", cash)

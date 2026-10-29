@@ -103,7 +103,8 @@ class MonobankAccount(models.Model):
     is_jar = models.BooleanField(default=False)
     title = models.CharField(_("назва"), max_length=120)
     currency = models.CharField(_("валюта"), max_length=3)
-    balance = models.DecimalField(_("залишок у банку"), max_digits=14, decimal_places=2, null=True, blank=True)
+    balance = models.DecimalField(_("власні кошти в банку"), max_digits=14, decimal_places=2, null=True, blank=True)
+    credit_limit = models.DecimalField(_("кредитний ліміт"), max_digits=14, decimal_places=2, default=0)
     account = models.OneToOneField(
         Account,
         on_delete=models.SET_NULL,
@@ -124,6 +125,11 @@ class MonobankAccount(models.Model):
 
     def __str__(self):
         return self.title
+
+    def own_money(self, bank_balance):
+        if bank_balance is None:
+            return None
+        return bank_balance - (self.credit_limit or 0)
 
     @property
     def suggested_name(self):
@@ -152,3 +158,45 @@ class WalletCard(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class ShortcutAttempt(models.Model):
+    KEEP = 30
+
+    membership = models.ForeignKey(Membership, on_delete=models.CASCADE, related_name="shortcut_attempts")
+    created_at = models.DateTimeField(auto_now_add=True)
+    http_status = models.PositiveSmallIntegerField()
+    result = models.CharField(max_length=20)
+    message = models.CharField(max_length=200, blank=True)
+    card = models.CharField(max_length=80, blank=True)
+    merchant = models.CharField(max_length=80, blank=True)
+    amount = models.CharField(max_length=40, blank=True)
+
+    class Meta:
+        verbose_name = _("запит шорткату")
+        verbose_name_plural = _("запити шорткату")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.created_at:%d.%m %H:%M} {self.result}"
+
+    @property
+    def ok(self):
+        return self.http_status < 300
+
+    @classmethod
+    def record(cls, membership, payload, http_status, result, message):
+        def text(key, limit):
+            return str(payload.get(key) or "")[:limit]
+
+        cls.objects.create(
+            membership=membership,
+            http_status=http_status,
+            result=result[:20],
+            message=str(message)[:200],
+            card=text("card", 80),
+            merchant=text("merchant", 80) or text("title", 80),
+            amount=text("amount", 40),
+        )
+        old = cls.objects.filter(membership=membership).values_list("pk", flat=True)[cls.KEEP:]
+        cls.objects.filter(pk__in=list(old)).delete()

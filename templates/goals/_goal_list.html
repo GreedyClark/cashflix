@@ -11,12 +11,12 @@
       <div>
         <p class="eyebrow">{% translate "Відкладено" %}</p>
         <div class="bud-value num">{{ saved|money:currency }}</div>
-        <span class="bud-hint">{% blocktranslate with amount=target|money:currency %}з {{ amount }} на всі цілі{% endblocktranslate %}</span>
+        <span class="bud-hint">{% blocktranslate with amount=target|money:currency %}з {{ amount }} на цілі в гривні{% endblocktranslate %}</span>
       </div>
       <div>
-        <p class="eyebrow">{% translate "Щомісяця, щоб встигнути" %}</p>
-        <div class="bud-value num">{{ monthly|money:currency }}</div>
-        <span class="bud-hint">{% translate "для цілей з датою" %}</span>
+        <p class="eyebrow">{% blocktranslate with since=plan.period.since %}План {{ since }}{% endblocktranslate %}</p>
+        <div class="bud-value num">{{ plan.done|money:currency }} <small class="bud-of">{% blocktranslate with amount=plan.plan|money:currency %}з {{ amount }}{% endblocktranslate %}</small></div>
+        <span class="bud-hint">{% if plan.plan %}{% if plan.left %}{% blocktranslate with amount=plan.left|money:currency %}ще відкласти {{ amount }}{% endblocktranslate %}{% else %}{% translate "план місяця виконано" %}{% endif %}{% else %}{% translate "додайте дату або суму на місяць у ціль" %}{% endif %}</span>
       </div>
       <div>
         <p class="eyebrow">{% translate "Досягнуто" %}</p>
@@ -24,6 +24,14 @@
         <span class="bud-hint">{% translate "цілей" %}</span>
       </div>
     </div>
+    {% if plan.plan %}<div class="lim-bar big"><i style="width: {{ plan.percent }}%"></i></div>{% endif %}
+    {% if plan.too_much %}
+      <p class="bud-note bad">{% blocktranslate with plan=plan.plan|money:currency typical=plan.typical|money:currency %}План {{ plan }} на місяць, а зазвичай після всіх витрат лишається {{ typical }}. Відсуньте дату якоїсь цілі або зменшіть суму, інакше план не виконати.{% endblocktranslate %}</p>
+    {% elif plan.plan and plan.typical is not None %}
+      <p class="bud-note">{% blocktranslate with typical=plan.typical|money:currency %}Зазвичай після всіх витрат лишається {{ typical }} на місяць, тож план реальний.{% endblocktranslate %}</p>
+    {% elif not plan.plan and plan.suggested %}
+      <p class="bud-note">{% blocktranslate with amount=plan.suggested|money:currency %}Добре правило: відкладати хоча б 10% доходу, для вас це ≈ {{ amount }} на місяць. Вкажіть у цілі дату або суму на місяць.{% endblocktranslate %}</p>
+    {% endif %}
   </section>
 {% endif %}
 
@@ -47,11 +55,7 @@
             <summary class="icon-btn" aria-label="{% translate 'Дії' %}"><c-icon name="dots" /></summary>
             <div class="menu-pop">
               {% if not archived %}
-                {% if goal.tracks_account %}
-                  <button class="menu-item" type="button" hx-get="{% url 'money:transaction_create' %}?type=transfer&to_account={{ goal.account_id }}" hx-target="#tx-dialog-body"><c-icon name="arrows-exchange" />{% translate "Поповнити переказом" %}</button>
-                {% else %}
-                  <button class="menu-item" type="button" hx-get="{% url 'goals:contribution_create' goal.pk %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Внесок" %}</button>
-                {% endif %}
+                <button class="menu-item" type="button" hx-get="{% url 'goals:contribution_create' goal.pk %}" hx-target="#tx-dialog-body"><c-icon name="plus" />{% translate "Відкласти" %}</button>
               {% endif %}
               <button class="menu-item" type="button" hx-get="{% url 'goals:goal_edit' goal.pk %}" hx-target="#tx-dialog-body"><c-icon name="pencil" />{% translate "Змінити" %}</button>
               <button class="menu-item" type="button" hx-post="{% url 'goals:goal_archive' goal.pk %}" hx-swap="none"><c-icon name="archive" />{% if archived %}{% translate "Повернути" %}{% else %}{% translate "В архів" %}{% endif %}</button>
@@ -68,8 +72,8 @@
         <div class="lim-foot">
           {% if item.done %}
             <span class="good">{% translate "Ціль досягнуто" %}</span>
-          {% elif item.monthly %}
-            <span>{% blocktranslate with amount=item.monthly|money:goal.currency %}{{ amount }} на місяць{% endblocktranslate %}</span>
+          {% elif item.plan %}
+            <span>{% blocktranslate with amount=item.plan|money:goal.currency %}{{ amount }} на місяць{% endblocktranslate %}</span>
           {% else %}
             <span>{% blocktranslate with amount=item.left|money:goal.currency %}лишилось {{ amount }}{% endblocktranslate %}</span>
           {% endif %}

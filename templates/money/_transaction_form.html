@@ -17,6 +17,10 @@
           <button class="btn-cf sm" type="button" hx-post="{% url 'money:transaction_not_duplicate' transaction.pk %}" hx-swap="none">{% translate "Це різні" %}</button>
         </div>
       </div>
+    {% elif maybe_transfer %}
+      <div class="notice-cf warn">
+        <p>{% translate "Схоже на переказ між вашими рахунками. Якщо так, оберіть «Переказ» і рахунок зарахування: тоді це не буде ні витратою, ні доходом, а друга половина переказу з'єднається сама." %}</p>
+      </div>
     {% elif transaction.needs_review %}
       <div class="notice-cf warn">
         <p>{% translate "Категорію підібрано автоматично, бо магазин ще незнайомий. Оберіть правильну й збережіть: наступні покупки тут CashFlix запам'ятає." %}</p>
@@ -33,6 +37,7 @@
         <span class="amount-cur"></span>
       </label>
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <label class="check-cf only-expense refund-check"><input type="checkbox" name="is_refund"{% if form.is_refund.value %} checked{% endif %}>{% translate "Це повернення коштів: зменшить витрати категорії" %}</label>
     </div>
 
     <div class="field-cf{% if form.title.errors %} has-error{% endif %}">

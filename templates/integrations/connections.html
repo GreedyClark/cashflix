@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n money %}
 
 {% block title %}{% translate "Підключення" %} · CashFlix{% endblock %}
 
@@ -38,6 +38,23 @@
           <div><dt>{% translate "Створено" %}</dt><dd>{{ token.created_at|date:"j E Y" }}</dd></div>
           <div><dt>{% translate "Остання операція" %}</dt><dd>{% if token.last_used_at %}{{ token.last_used_at|date:"j E, H:i" }}{% else %}{% translate "ще не було" %}{% endif %}</dd></div>
         </dl>
+
+        <div class="attempts">
+          <span class="f-label">{% translate "Останні запити з iPhone" %}</span>
+          {% if attempts %}
+            <ul class="attempt-list">
+              {% for attempt in attempts %}
+                <li class="{% if attempt.ok %}ok{% else %}bad{% endif %}">
+                  <span class="attempt-time num">{{ attempt.created_at|date:"j E, H:i" }}</span>
+                  <span class="attempt-what">{{ attempt.merchant|default:"—" }} · {{ attempt.amount|default:"—" }}{% if attempt.card %} · {{ attempt.card }}{% endif %}</span>
+                  <span class="attempt-result">{% if attempt.ok %}{% if attempt.result == "skipped" %}↷{% else %}✅{% endif %}{% else %}⚠️{% endif %} {{ attempt.message|default:attempt.result }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="field-help">{% translate "Запитів ще не було. Якщо ви платили, а тут порожньо, запит не дійшов до сайту: перевірте автоматизацію в «Командах» та інтернет у момент оплати." %}</p>
+          {% endif %}
+        </div>
 
         <form class="conn-form" method="post">
           {% csrf_token %}
@@ -145,6 +162,7 @@
               <span class="mono-name">
                 <c-icon name="{% if item.is_jar %}pig-money{% else %}credit-card{% endif %}" />{{ item.title }}
                 {% if item.account and item.synced_until %}<span class="bud-hint">{% blocktranslate with date=item.synced_until|date:"j E, H:i" %}оновлено {{ date }}{% endblocktranslate %}</span>{% endif %}
+                {% if item.credit_limit %}<span class="bud-hint">{% blocktranslate with amount=item.credit_limit|money:item.currency %}кредитний ліміт {{ amount }} не рахується як ваші гроші{% endblocktranslate %}</span>{% endif %}
               </span>
               <div class="pill-row mono-choices" role="radiogroup" aria-label="{% blocktranslate with name=item.title %}Рахунок для {{ name }}{% endblocktranslate %}">
                 <label class="pill-cf"><input type="radio" name="link_{{ item.pk }}" value=""{% if not item.account_id %} checked{% endif %}>{% translate "Не записувати" %}</label>

@@ -295,7 +295,10 @@ class Transaction(models.Model):
             models.Index(fields=["household", "type", "date"]),
         ]
         constraints = [
-            models.CheckConstraint(condition=Q(amount__gt=0), name="transaction_amount_positive"),
+            models.CheckConstraint(
+                condition=Q(amount__gt=0) | Q(type="expense", amount__lt=0),
+                name="transaction_amount_positive_or_refund",
+            ),
             models.UniqueConstraint(
                 fields=["household", "source", "external_id"],
                 condition=~Q(external_id=""),
@@ -309,6 +312,10 @@ class Transaction(models.Model):
     @property
     def is_transfer(self):
         return self.type == self.Type.TRANSFER
+
+    @property
+    def is_refund(self):
+        return self.type == self.Type.EXPENSE and self.amount < 0
 
     def clean(self):
         errors = {}

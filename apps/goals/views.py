@@ -7,21 +7,25 @@ from django.views.decorators.http import require_POST
 
 from apps.core.htmx import toast_response
 from apps.money.icon_catalog import choices
+from apps.money.rates import RateNotFound
 
 from .forms import ContributionForm, GoalForm
-from .services import goal_items
+from .services import goal_items, month_plan
 
 CHANGED = ("goalsChanged", "closeModal")
+MOVED = ("goalsChanged", "accountsChanged", "transactionsChanged", "closeModal")
 
 
 def goal_list(request):
     household = request.household
     archived = request.GET.get("archived") == "1"
-    items = goal_items(household, timezone.localdate(), archived=archived)
+    today = timezone.localdate()
+    items = goal_items(household, today, archived=archived)
     base = household.base_currency
     in_base = [item for item in items if item["goal"].currency == base]
     context = {
         "items": items,
+        "plan": None if archived else month_plan(household, today, items),
         "archived": archived,
         "archived_count": household.goals.filter(is_archived=True).count(),
         "saved": sum((item["saved"] for item in in_base), Decimal("0")),
@@ -67,11 +71,19 @@ def goal_delete(request, pk):
 
 
 def contribution_create(request, pk):
-    goal = get_object_or_404(request.household.goals, pk=pk, account__isnull=True)
+    goal = get_object_or_404(request.household.goals.select_related("account", "household"), pk=pk)
     form = ContributionForm(request.POST or None, goal=goal, membership=request.membership)
     if request.method == "POST" and form.is_valid():
-        contribution = form.save()
-        message = _("Внесок записано") if contribution.amount > 0 else _("Записано, що взяли з цілі")
-        return toast_response(request, message, events=CHANGED)
-    history = goal.contributions.select_related("member__user")[:5]
+        try:
+            form.save()
+        except RateNotFound:
+            form.add_error("amount", _("Немає курсу валюти на цю дату. Спробуйте пізніше."))
+        else:
+            taking = form.cleaned_data["direction"] == form.OUT
+            message = _("Записано, що взяли з цілі") if taking else _("Відкладено в ціль")
+            return toast_response(request, message, events=MOVED)
+    if goal.tracks_account:
+        history = []
+    else:
+        history = goal.contributions.select_related("member__user", "transaction__account", "transaction__to_account")[:5]
     return render(request, "goals/_contribution_form.html", {"form": form, "goal": goal, "history": history})

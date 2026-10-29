@@ -71,6 +71,7 @@ def connections(request):
         card.choices = [a for a in accounts if currency is None or a.currency == currency]
 
     context = {
+        "attempts": request.membership.shortcut_attempts.all()[:10],
         "wallet_cards": wallet_cards,
         "token": token,
         "form": form,

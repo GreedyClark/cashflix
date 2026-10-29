@@ -15,10 +15,31 @@
       <label class="amount-field">
         <input class="amount-input num" type="text" name="amount" value="{{ form.amount.value|default_if_none:'' }}"
                inputmode="decimal" autocomplete="off" placeholder="0" aria-label="{% translate 'Сума' %}" autofocus>
-        <span class="amount-cur static">₴</span>
+        <span class="amount-cur static">{% if goal.currency == "USD" %}${% elif goal.currency == "EUR" %}€{% else %}₴{% endif %}</span>
       </label>
       {% for error in form.amount.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
     </div>
+
+    <fieldset class="field-cf{% if form.source.errors %} has-error{% endif %}">
+      <legend class="f-label"><span class="only-in">{% translate "З якого рахунку" %}</span><span class="only-out">{% translate "На який рахунок" %}</span></legend>
+      <div class="pill-row">
+        {% for option in form.source_options %}
+          <label class="pill-cf"><input type="radio" name="source" value="{{ option.object.pk }}"{% if option.checked %} checked{% endif %}><c-icon :name="option.object.icon" />{{ option.object.name }}</label>
+        {% endfor %}
+        {% if not goal.tracks_account %}
+          <label class="pill-cf"><input type="radio" name="source" value=""{% if not form.source.value %} checked{% endif %}>{% translate "Лише записати" %}</label>
+        {% endif %}
+      </div>
+      {% for error in form.source.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+      <p class="field-help">
+        {% if goal.tracks_account %}
+          {% blocktranslate with name=goal.account.name %}Гроші перейдуть переказом на «{{ name }}».{% endblocktranslate %}
+        {% else %}
+          {% translate "Сума спишеться з картки на рахунок «Відкладено на цілі», тож її не буде видно як вільні гроші. «Лише записати» — якщо гроші вже лежать окремо." %}
+        {% endif %}
+        {% if goal.currency != request.household.base_currency %}{% translate "Сума в валюті цілі, з гривневої картки спишеться за курсом НБУ на дату." %}{% endif %}
+      </p>
+    </fieldset>
 
     <div class="field-cf">
       <label class="f-label" for="{{ form.date.id_for_label }}">{% translate "Дата" %}</label>
@@ -49,8 +70,8 @@
         <ul class="goal-history">
           {% for item in history %}
             <li>
-              <span>{{ item.date|date:"j E" }}{% if item.member %} · {{ item.member.user.name }}{% endif %}{% if item.note %} · {{ item.note }}{% endif %}</span>
-              <b class="num{% if item.amount > 0 %} plus{% endif %}">{% if item.amount > 0 %}+{% endif %}{{ item.amount|money }}</b>
+              <span>{{ item.date|date:"j E" }}{% if item.member %} · {{ item.member.user.name }}{% endif %}{% if item.transaction %} · {% if item.amount > 0 %}{{ item.transaction.account.name }}{% else %}{{ item.transaction.to_account.name }}{% endif %}{% endif %}{% if item.note %} · {{ item.note }}{% endif %}</span>
+              <b class="num{% if item.amount > 0 %} plus{% endif %}">{% if item.amount > 0 %}+{% endif %}{{ item.amount|money:goal.currency }}</b>
             </li>
           {% endfor %}
         </ul>

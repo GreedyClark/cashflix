@@ -6,7 +6,7 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from apps.households.models import Household, Membership
+from apps.households.models import Currency, Household, Membership
 from apps.money.models import CENT, MONEY, Account
 
 
@@ -33,6 +33,8 @@ class Goal(models.Model):
         help_text=_("Порожньо — внески записуються вручну"),
     )
     target_amount = models.DecimalField(_("ціль"), **MONEY)
+    currency_code = models.CharField(_("валюта"), max_length=3, choices=Currency.choices, blank=True)
+    monthly_amount = models.DecimalField(_("відкладати на місяць"), null=True, blank=True, **MONEY)
     deadline = models.DateField(_("до коли"), null=True, blank=True)
     is_archived = models.BooleanField(_("в архіві"), default=False)
     created_at = models.DateTimeField(_("створено"), auto_now_add=True)
@@ -60,7 +62,9 @@ class Goal(models.Model):
 
     @property
     def currency(self):
-        return self.account.currency if self.account_id else self.household.base_currency
+        if self.account_id:
+            return self.account.currency
+        return self.currency_code or self.household.base_currency
 
     def get_saved(self):
         return self.contributions.aggregate(total=Coalesce(Sum("amount"), Decimal("0")))["total"]
@@ -76,6 +80,13 @@ class Goal(models.Model):
         today = today or timezone.localdate()
         months = self.months_between(today, self.deadline)
         return (left / months).quantize(CENT, rounding=ROUND_HALF_UP)
+
+    def monthly_plan(self, saved, today=None):
+        if saved >= self.target_amount:
+            return Decimal("0")
+        if self.deadline:
+            return self.monthly_needed(saved, today)
+        return self.monthly_amount or Decimal("0")
 
     def progress(self, saved):
         return max(0, min(100, int(saved * 100 / self.target_amount)))
@@ -94,6 +105,14 @@ class GoalContribution(models.Model):
         verbose_name=_("хто"),
     )
     note = models.CharField(_("нотатка"), max_length=200, blank=True)
+    transaction = models.OneToOneField(
+        "money.Transaction",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="goal_contribution",
+        verbose_name=_("переказ"),
+    )
 
     class Meta:
         verbose_name = _("внесок")

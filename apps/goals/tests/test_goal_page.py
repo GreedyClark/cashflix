@@ -108,11 +108,71 @@ def test_contribution_in_and_out(yura_client, home, yura):
     assert sorted(goal.contributions.values_list("amount", flat=True)) == [Decimal("-120.50"), Decimal("500")]
 
 
-def test_no_manual_contributions_for_account_goal(yura_client, home, jar):
-    goal = Goal.objects.create(household=home, name="Ремонт", target_amount=Decimal("100"), account=jar)
+def test_account_goal_contribution_is_transfer(yura_client, home, mono, jar):
+    goal = Goal.objects.create(household=home, name="Ремонт", target_amount=Decimal("100000"), account=jar)
 
-    assert yura_client.get(reverse("goals:contribution_create", args=[goal.pk])).status_code == 404
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "2000", "date": "2026-10-25", "source": mono.pk, "member": ""})
 
+    tx = home.transactions.get()
+    assert (tx.type, tx.account, tx.to_account, tx.amount) == ("transfer", mono, jar, Decimal("2000"))
+    assert jar.get_balance() == Decimal("7000")
+    assert not goal.contributions.exists()
+
+
+def test_manual_goal_from_card_moves_money_to_reserve(yura_client, home, mono):
+    goal = Goal.objects.create(household=home, name="Відпустка", target_amount=Decimal("60000"))
+
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "3000", "date": "2026-10-25", "source": mono.pk, "member": ""})
+
+    contribution = goal.contributions.get()
+    reserve = contribution.transaction.to_account
+    assert (reserve.kind, reserve.name) == ("savings", "Відкладено на цілі")
+    assert mono.get_balance() == Decimal("-2000")
+    assert reserve.get_balance() == Decimal("3000")
+    assert goal.get_saved() == Decimal("3000")
+
+
+def test_manual_goal_without_card_only_records(yura_client, home, mono):
+    goal = Goal.objects.create(household=home, name="Подарунок", target_amount=Decimal("1000"))
+
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "300", "date": "2026-10-25", "source": "", "member": ""})
+
+    assert goal.get_saved() == Decimal("300")
+    assert not home.transactions.exists()
+
+
+def test_dollar_goal_from_hryvnia_card(yura_client, home, mono, usd_rate):
+    goal = Goal.objects.create(household=home, name="Подушка", target_amount=Decimal("5000"), currency_code="USD")
+
+    yura_client.post(reverse("goals:contribution_create", args=[goal.pk]), {"direction": "in", "amount": "100", "date": "2026-10-25", "source": mono.pk, "member": ""})
+
+    transfer = goal.contributions.get().transaction
+    assert (transfer.amount, transfer.to_amount, transfer.to_account.currency) == (Decimal("4132.00"), Decimal("100"), "USD")
+    assert transfer.to_account.name == "Відкладено на цілі USD"
+
+
+def test_month_plan_and_reality_check(home, mono, food, salary):
+    from apps.goals.services import month_plan
+
+    today = datetime.date(2026, 10, 25)
+    Goal.objects.create(household=home, name="Ноутбук", target_amount=Decimal("30000"), deadline=datetime.date(2027, 4, 25))
+    Goal.objects.create(household=home, name="Подушка", target_amount=Decimal("100000"), monthly_amount=Decimal("3000"))
+    for month in (7, 8, 9):
+        Transaction.objects.create(household=home, account=mono, category=salary, type="income", amount=Decimal("20000"), date=datetime.date(2026, month, 5), title="ЗП")
+        Transaction.objects.create(household=home, account=mono, category=food, amount=Decimal("15000"), date=datetime.date(2026, month, 10), title="x")
+
+    plan = month_plan(home, today)
+
+    assert plan["plan"] == Decimal("8000")
+    assert plan["typical"] == Decimal("5000")
+    assert plan["too_much"]
+
+
+def test_goal_in_dollars_saved_from_form(yura_client, home):
+    yura_client.post(reverse("goals:goal_create"), {"mode": "manual", "name": "Подушка", "target_amount": "5000", "currency_code": "USD", "monthly_amount": "200"})
+
+    goal = Goal.objects.get()
+    assert (goal.currency, goal.monthly_amount) == ("USD", Decimal("200"))
 
 def test_archive_and_delete(yura_client, home):
     goal = Goal.objects.create(household=home, name="Ціль", target_amount=Decimal("100"))

@@ -186,3 +186,14 @@ def test_member_sets_own_income_categories(client, home, olya, salary):
     client.post(reverse("households:income_categories"), {"category": [salary.pk, gifts.pk]})
 
     assert set(olya.income_categories.all()) == {salary, gifts}
+
+
+def test_personal_limit_inside_shared_is_not_planned_twice(home, mono, food, olya):
+    Limit.objects.create(household=home, category=food, amount=Decimal("10000"))
+    Limit.objects.create(household=home, category=food, member=olya, amount=Decimal("3000"))
+    add(home, mono, food, "1000", datetime.date(2026, 10, 10), member=olya)
+
+    budget = BudgetMonth(home, Period.containing(datetime.date(2026, 10, 20)), datetime.date(2026, 10, 20))
+    summary = budget.summary(budget.limits())
+
+    assert (summary["planned"], summary["spent"]) == (Decimal("10000"), Decimal("1000"))

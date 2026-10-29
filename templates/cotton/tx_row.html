@@ -15,6 +15,7 @@
     <div class="tx-name">
       <span>{{ tx.title }}</span>
       {% if tx.source == "shortcut" %}<span class="tag-cf">Apple Pay</span>{% elif tx.source == "monobank" %}<span class="tag-cf">Monobank</span>{% elif tx.source == "recurring" %}<span class="tag-cf">{% translate "регулярний" %}</span>{% endif %}
+      {% if tx.is_refund %}<span class="tag-cf">{% translate "повернення" %}</span>{% endif %}
       {% if tx.needs_review %}<span class="tag-cf warn">{% translate "перевірити" %}</span>{% endif %}
       {% if tx.duplicate_of_id %}<span class="tag-cf crit">{% translate "можливий дубль" %}</span>{% endif %}
     </div>
@@ -33,8 +34,8 @@
     <span class="cat-chip tone-{{ tx.category.color_slot }}"><i></i>{{ tx.category.name }}</span>
   {% endif %}
 
-  <div class="tx-amount num{% if tx.type == 'income' %} plus{% endif %}">
-    {% if tx.type == "expense" %}−{% elif tx.type == "income" %}+{% endif %}{{ tx.amount|money:tx.currency }}
+  <div class="tx-amount num{% if tx.type == 'income' or tx.is_refund %} plus{% endif %}">
+    {% if tx.is_refund %}+{{ tx.amount|absolute|money:tx.currency }}{% else %}{% if tx.type == "expense" %}−{% elif tx.type == "income" %}+{% endif %}{{ tx.amount|money:tx.currency }}{% endif %}
     {% if tx.currency != request.household.base_currency %}<small>≈ {{ tx.amount_base|money:request.household.base_currency }}</small>{% endif %}
   </div>
 

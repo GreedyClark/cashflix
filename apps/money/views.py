@@ -11,13 +11,14 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_POST
 
 from apps.core.htmx import toast_response
+from apps.goals.services import moved_to_savings
 
 from .accounts import load_accounts, month_flow, rate_changes
 from .categorize import remember
 from .export import build_workbook, file_name
 from .forms import AccountForm, TransactionFilterForm, TransactionForm, ValuationForm, next_month
 from .models import Account
-from .services import restore, snapshot
+from .services import absorb_halves, looks_like_transfer, restore, snapshot
 
 UNDO_KEY = "undo_transaction"
 
@@ -67,9 +68,10 @@ def transaction_list(request):
         days[-1]["items"].append(tx)
 
     spent = transactions.expenses().total_base()
-    earned = transactions.incomes().total_base()
-    previous_month = (month - timedelta(days=1)).replace(day=1)
     following_month = next_month(month)
+    earned = transactions.incomes().total_base()
+    saved = moved_to_savings(household, month, following_month - timedelta(days=1))
+    previous_month = (month - timedelta(days=1)).replace(day=1)
     filter_names = ("q", "type", "category", "member", "account", "day", "review")
     context = {
         "form": form,
@@ -82,7 +84,7 @@ def transaction_list(request):
         "has_next": following_month <= timezone.localdate(),
         "spent": spent,
         "earned": earned,
-        "balance": earned - spent,
+        "balance": earned - spent - saved,
         "is_filtered": any(form.cleaned_data.get(name) for name in filter_names),
         "has_any": household.transactions.exists(),
         "review_count": household.transactions.filter(Q(needs_review=True) | Q(duplicate_of__isnull=False)).count(),
@@ -125,8 +127,16 @@ def transaction_form(request, transaction=None, initial=None):
         form.instance.needs_review = False
         tx = form.save()
         remember(tx)
-        return toast_response(request, _("Операцію додано") if is_new else _("Зміни збережено"), events=CHANGED)
-    return render(request, "money/_transaction_form.html", {"form": form, "transaction": transaction})
+        message = _("Операцію додано") if is_new else _("Зміни збережено")
+        if tx.is_transfer and absorb_halves(tx):
+            message = _("Збережено як переказ і об'єднано з другою половиною")
+        return toast_response(request, message, events=CHANGED)
+    context = {
+        "form": form,
+        "transaction": transaction,
+        "maybe_transfer": transaction is not None and not transaction.is_transfer and looks_like_transfer(transaction),
+    }
+    return render(request, "money/_transaction_form.html", context)
 
 
 def transaction_create(request):

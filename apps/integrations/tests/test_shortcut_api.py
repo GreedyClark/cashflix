@@ -126,3 +126,22 @@ def test_huge_amount_is_rejected(client, raw_token, mono):
     response = post(client, raw_token, amount="99999999999", merchant="x")
 
     assert response.json()["error"] == "amount"
+
+
+def test_attempts_are_logged_and_shown(client, home, yura, mono, raw_token):
+    post(client, raw_token, amount="абв", merchant="Magazin", card="Монобанк")
+    post(client, raw_token, amount="85", merchant="Кава", card="Монобанк")
+    client.force_login(yura.user)
+
+    page = client.get(reverse("integrations:connections")).content.decode()
+
+    attempts = list(yura.shortcut_attempts.all())
+    assert [a.result for a in attempts] == ["created", "error"]
+    assert attempts[1].message == "Не вдалося прочитати суму."
+    assert "Останні запити з iPhone" in page and "Magazin" in page
+
+
+def test_attempts_keep_only_recent(client, yura, mono, raw_token):
+    for number in range(35):
+        post(client, raw_token, amount=str(number + 1), merchant="x", card="Монобанк", id=f"r{number}")
+    assert yura.shortcut_attempts.count() == 30

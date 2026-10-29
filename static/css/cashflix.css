@@ -2874,6 +2874,7 @@ a.bar-col:hover i {
 .tx-form:has([name="type"][value="income"]:checked) .cat-tile[data-kind="expense"],
 .tx-form:not(:has([name="type"][value="income"]:checked)) .only-income,
 .tx-form:has([name="type"][value="income"]:checked) .only-expense,
+.tx-form:has([name="type"][value="transfer"]:checked) .only-expense,
 .tx-form:has([name="type"][value="transfer"]:checked) [data-show="expense income"],
 .tx-form:not(:has([name="type"][value="transfer"]:checked)) [data-show="transfer"],
 .tx-form:not(:has([name="when"][value="other"]:checked)) .date-other {
@@ -3715,6 +3716,7 @@ a.bar-col:hover i {
 .acc-card {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 4px;
   min-width: 0;
   padding: 16px 18px;
@@ -3754,7 +3756,15 @@ a.bar-col:hover i {
 .acc-title {
   flex: 1;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
+}
+
+.acc-name,
+.acc-kind {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .acc-name {
@@ -5918,4 +5928,178 @@ select option {
 .pay-mode .icon {
   width: 13px;
   height: 13px;
+}
+
+.attempts {
+  display: grid;
+  gap: 8px;
+}
+
+.attempt-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attempt-list li {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 2px 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+  font-size: 13px;
+}
+
+.attempt-list li:first-child {
+  border-top: 0;
+}
+
+.attempt-time {
+  color: var(--ink-subtle);
+}
+
+.attempt-what {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attempt-result {
+  grid-column: 2;
+  color: var(--ink-muted);
+}
+
+.attempt-list li.bad .attempt-result {
+  color: var(--crit);
+}
+
+@media (max-width: 575px) {
+  .attempt-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .attempt-result {
+    grid-column: 1;
+  }
+}
+
+.contribution-form:has([name="direction"][value="out"]:checked) .only-in,
+.contribution-form:not(:has([name="direction"][value="out"]:checked)) .only-out {
+  display: none;
+}
+
+.goal-form:has([name="mode"][value="manual"]:checked):has([name="currency_code"][value="USD"]:checked) .amount-cur::before {
+  content: "$";
+}
+
+.goal-form:has([name="mode"][value="manual"]:checked):has([name="currency_code"][value="EUR"]:checked) .amount-cur::before {
+  content: "€";
+}
+
+.kpi-value.bad {
+  color: var(--crit);
+}
+
+.kpi-money {
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: 10px;
+  color: var(--ink-subtle);
+  font-size: 12px;
+}
+
+.kpi-money span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kpi-money b {
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+.kpi-left {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 14px;
+}
+
+/* Mobile fixes */
+
+input[type="date"] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+.invest-fixed > *,
+.field-row > * {
+  min-width: 0;
+}
+
+@media (max-width: 575px) {
+  .page-actions {
+    margin-left: 0;
+  }
+
+  .conn-row {
+    flex-wrap: wrap;
+  }
+
+  .conn-row input[type="password"],
+  .conn-row input[type="text"] {
+    flex: 1 1 100%;
+  }
+
+  .conn-row .btn-cf {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .acc-menu[open]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.5);
+    animation: sheet-dim 0.2s ease-out;
+  }
+
+  .acc-menu .menu-pop {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 61;
+    min-width: 0;
+    padding: 18px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+    border-radius: 22px 22px 0 0;
+    border-bottom: 0;
+    background: var(--surface-1);
+    animation: sheet-up 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+
+  .acc-menu .menu-item {
+    gap: 12px;
+    padding: 14px 12px;
+    font-size: 16px;
+  }
+}
+
+.bud-of { white-space: nowrap; }
+
+@media (max-width: 575px) {
+  .bud-value .bud-of { display: block; margin-top: 2px; font-size: 15px; font-weight: 500; color: var(--ink-tertiary); }
 }

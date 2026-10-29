@@ -333,3 +333,62 @@ def test_shortcut_skips_twin_of_monobank_operation(client, home, yura, mono, con
 
     assert response.json()["status"] == "skipped"
     assert home.transactions.count() == 1
+
+
+def test_credit_limit_is_not_own_money(bank, yura, mono, monkeypatch):
+    info = {**INFO, "accounts": [{**INFO["accounts"][0], "balance": 3679300, "creditLimit": 3000000}]}
+    monkeypatch.setattr(monobank, "client_info", lambda token: info)
+    connection = connect(yura, "good")
+    card = link(connection, "black", mono)
+    from apps.integrations.sync import reconcile
+
+    connection.accounts.update(balance=None)
+    from apps.integrations.sync import refresh_accounts
+
+    refresh_accounts(connection, info)
+    card.refresh_from_db()
+    reconcile(card, card.balance)
+
+    assert (card.credit_limit, card.balance) == (Decimal("30000.00"), Decimal("6793.00"))
+    assert mono.get_balance() == Decimal("6793.00")
+
+
+def test_refund_from_shop_reduces_expenses(connection, home, mono, bank):
+    black = link(connection, "black", mono)
+    bank["black"] = [item("buy", -50000, minutes=10, description="ROZETKA", mcc=5732), item("back", 50000, minutes=30, description="ROZETKA", mcc=5732)]
+
+    sync_account(black, NOW)
+
+    refund = home.transactions.get(external_id="back")
+    assert (refund.type, refund.amount, refund.is_refund) == ("expense", Decimal("-500.00"), True)
+    assert home.transactions.expenses().total_base() == 0
+    assert not home.transactions.incomes().exists()
+
+
+def test_cashback_stays_income(connection, home, mono, bank):
+    black = link(connection, "black", mono)
+    bank["black"] = [item("cb", 2500, description="Кешбек за жовтень", mcc=0)]
+
+    sync_account(black, NOW)
+
+    assert home.transactions.get().type == "income"
+
+
+def test_atm_withdrawal_is_transfer_to_cash(connection, home, mono, bank):
+    black = link(connection, "black", mono)
+    bank["black"] = [item("atm", -100000, description="Банкомат", mcc=6011)]
+
+    sync_account(black, NOW)
+
+    tx = home.transactions.get()
+    assert (tx.type, tx.to_account.kind, tx.amount) == ("transfer", "cash", Decimal("1000.00"))
+    assert not home.transactions.expenses().exists()
+
+
+def test_p2p_transfer_is_flagged(connection, home, mono, bank):
+    black = link(connection, "black", mono)
+    bank["black"] = [item("p2p", -200000, description="Переказ на картку ПриватБанк", mcc=4829)]
+
+    sync_account(black, NOW)
+
+    assert home.transactions.get().needs_review

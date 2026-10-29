@@ -1,53 +1,89 @@
 # CashFlix
 
-Сімейний бюджет для кількох людей: витрати, доходи й перекази між рахунками в кількох валютах, ліміти на категорії (спільні й особисті), регулярні платежі та цілі накопичень. Вхід через Google, партнера можна запросити в сім'ю одноразовим посиланням. Оплати Apple Pay і Monobank потраплятимуть у бюджет автоматично.
+A family budget app for two or more people. You and your partner log expenses, income and transfers across cards, cash, savings and investments in several currencies. CashFlix tracks category limits, recurring payments and savings goals, and tells you how much money you have left for the month.
 
-![Огляд](docs/overview.png)
+Live demo: https://cashflix-m5vd.onrender.com (press **«Увійти в демо як Юра»** on the login page; the free server takes up to a minute to wake up).
 
-| Картка операції | Телефон |
+The interface is in Ukrainian.
+
+![Overview](docs/screenshots/overview.png)
+
+| Phone | Light theme |
 |---|---|
-| ![Операція](docs/operation.png) | ![Телефон](docs/mobile.png) |
+| <img src="docs/screenshots/mobile-overview.png" width="300"> | <img src="docs/screenshots/overview-light.png" width="560"> |
 
-> Проєкт у розробці. Готово фази 0–3, далі — рахунки й курси НБУ.
+## Features
 
-## Можливості
+**Family budget.** One shared budget for the whole family. You invite a partner with a one-time link that lasts 7 days. Each account, limit and operation belongs to one person or to the family, and a switch on the overview shows everyone or one member.
 
-- **Сім'я.** Спільний бюджет для кількох людей, запрошення за посиланням на 7 днів, видалення учасника без втрати його історії, перемикання між кількома сім'ями.
-- **Операції.** Витрати, доходи й перекази. Пошук і фільтри без перезавантаження сторінки (HTMX), графік витрат по днях, клік по дню показує лише його операції.
-- **Картка операції.** Додавання, редагування й видалення з можливістю «Повернути». Суму можна вводити з комою, валюта береться з рахунку, курс НБУ зберігається разом з операцією.
-- **Огляд.** Баланс усіх рахунків, дохід і витрати з порівнянням до минулого місяця, прогноз витрат до кінця місяця, «Куди йдуть гроші», ліміти, останні операції, рахунки й цілі. Перемикач «Усі / окремий учасник».
-- **Мультивалютність.** Кожна операція зберігає суму, курс на дату і суму в основній валюті, тож старі підсумки не змінюються.
-- **Інтерфейс.** Українською через gettext, темна й світла тема, мобільна версія з нижнім меню.
+**Overview.** The first tile shows what is left this month: income minus expenses minus money moved to savings. Below it you see live money (cards and cash), total capital, a spending forecast that counts unpaid recurring bills, limits with a pace marker, upcoming payments and short insights such as "Clothes is 63% above your usual pace".
 
-## Стек
+![Operations](docs/screenshots/operations.png)
 
-- Python 3.14, Django 5.2 LTS
-- Django templates + django-cotton (компоненти), HTMX
+**Operations.** Expenses, income and transfers with search, filters and a daily chart. HTMX reloads the list without a page refresh. A checkbox marks an expense as a refund, so it lowers the category total instead of counting as income. Export goes to Excel.
+
+![New operation](docs/screenshots/new-operation.png)
+
+**Budget month and limits.** Your budget month can start on payday (for example the 20th). A limit is a fixed amount or a percent of the month's income, shared or personal. CashFlix compares spending with the average of the last three months.
+
+![Budget](docs/screenshots/budget.png)
+
+**Accounts and currencies.** Cards, cash, savings and investment accounts in UAH, USD or EUR. Each operation stores the National Bank of Ukraine rate for its date, so old totals stay the same when the rate moves. Investment accounts handle fixed-rate deposits and bonds (interest accrues daily) or market value updates.
+
+![Accounts](docs/screenshots/accounts.png)
+
+**Savings goals.** A goal has a target, an optional deadline or monthly amount, and its own currency. When you put money aside from a card, CashFlix records a transfer to the goal's account or to a reserve account, so the money leaves your spendable balance. The goals page shows this month's plan and warns you if the plan is larger than what you usually have left.
+
+| Goals | Phone |
+|---|---|
+| <img src="docs/screenshots/goals.png" width="560"> | <img src="docs/screenshots/mobile-goals.png" width="300"> |
+
+**Recurring payments.** Subscriptions and bills with automatic or manual payment, reminders by web push or Telegram at an hour each person picks.
+
+![Recurring payments](docs/screenshots/payments.png)
+
+**Bank imports.**
+- Monobank API: card statements arrive through a webhook. CashFlix subtracts the credit limit from the balance, turns ATM withdrawals into transfers to cash, recognizes refunds and cashback, and merges both halves of a transfer between your own cards.
+- iOS Shortcut: an Apple Pay payment from any bank lands in the budget through a personal token.
+
+**Security.** Google sign-in. Two-factor confirmation through Telegram or an authenticator app, with backup codes. Bank tokens and API keys stay encrypted in the database (Fernet).
+
+**AI assistant.** Each family adds its own free Gemini key. The assistant receives category totals only, without shop names or account names.
+
+**PWA.** You can install CashFlix on a phone home screen and get push notifications.
+
+## Stack
+
+- Python 3.13, Django 5.2
+- Django templates, django-cotton components, HTMX 2
 - Tabler, Tabler Icons, ApexCharts
-- django-allauth (вхід через Google)
-- SQLite локально, PostgreSQL на проді
-- pytest-django
+- django-allauth (Google), pywebpush, google-genai
+- SQLite locally, PostgreSQL (Neon) in production
+- pytest-django, around 360 tests
 
-Мінімум JavaScript: логіка на сервері, у HTMX-атрибутах і CSS (`:has()`). Власного JS — два невеликі файли (`app.js`, `charts.js`) і перемикач теми.
+The server renders the pages. Custom JavaScript is limited to a few small files for charts, the theme switch and push subscription.
 
-## Запуск локально (Windows / PowerShell)
+## Run locally
+
+Requirements: Python 3.13 and Git. On Windows, in PowerShell:
 
 ```powershell
 git clone https://github.com/GreedyClark/cashflix.git
 cd cashflix
-py -m venv .venv
+py -3.13 -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
 ```
 
-У `.env` замініть `SECRET_KEY` на власний:
+Fill in `.env`. Generate the two keys with:
 
 ```powershell
 python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Для входу потрібен OAuth-клієнт Google (Google Cloud Console → APIs & Services → Credentials). Redirect URI: `http://127.0.0.1:8000/accounts/google/login/callback/`. Його ID та секрет впишіть у `.env` як `GOOGLE_CLIENT_ID` і `GOOGLE_CLIENT_SECRET`.
+The first value goes to `SECRET_KEY`, the second to `ENCRYPTION_KEY`. Then:
 
 ```powershell
 python manage.py migrate
@@ -55,25 +91,23 @@ python manage.py seed_demo
 python manage.py runserver
 ```
 
-`seed_demo` створює демо-сім'ю з операціями за пів року, лімітами й цілями. Сайт відкриється на http://127.0.0.1:8000.
+Open http://127.0.0.1:8000 and press **«Увійти в демо як Юра»**. `seed_demo` creates a family with six months of operations, limits, recurring payments and goals.
 
-## Тести
+Optional settings in `.env`:
+
+| Variable | Needed for |
+|---|---|
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in. Redirect URI: `http://127.0.0.1:8000/accounts/google/login/callback/` |
+| `TELEGRAM_BOT_TOKEN` | Telegram confirmation and reminders |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web push. Generate with `python manage.py vapid_keys` |
+| `CRON_SECRET` | The daily job URL `/tasks/daily/<secret>/` (NBU rates, recurring payments, reminders) |
+
+## Tests
 
 ```powershell
 pytest
 ```
 
-## Що реалізовано
+## Deployment
 
-- [x] Фаза 0 — каркас: `.env`, українська мова з підтримкою перекладу, базовий шаблон, світла й темна тема, адаптивне меню
-- [x] Фаза 1 — моделі: сім'ї, учасники, рахунки, категорії, операції з валютами, ліміти, регулярні платежі, цілі, демо-дані
-- [x] Фаза 2 — вхід через Google, створення сім'ї, запрошення за посиланням, вихід і видалення учасників
-- [x] Фаза 3 — сторінка операцій з фільтрами й графіком, картка операції, дашборд «Огляд»
-
-## Що планується
-
-- [ ] Фаза 4 — сторінка рахунків, перекази, автоматичний курс НБУ
-- [ ] Фаза 5 — налаштування лімітів, регулярні платежі, підказки, цілі, експорт в Excel
-- [ ] Фаза 6 — iOS-шорткат для будь-якого банку, Monobank API з автоматичними категоріями, захист від дублів, перенесення старих даних
-- [ ] Фаза 7 — деплой
-- [ ] Фаза 8 — AI-асистент на ключі Gemini користувача
+The demo runs on Render (free web service) with a Neon PostgreSQL database. cron-job.org calls `/tasks/daily/<CRON_SECRET>/` to load exchange rates, create due recurring payments and send reminders. All secrets live in Render environment variables.

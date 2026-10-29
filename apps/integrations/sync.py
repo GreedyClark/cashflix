@@ -5,7 +5,8 @@ from decimal import Decimal
 from django.db import transaction as db_transaction
 from django.utils import timezone
 
-from apps.money.ingest import DUPLICATE, ingest
+from apps.money.categorize import MCC, merchant_key
+from apps.money.ingest import CREATED, DUPLICATE, ingest
 from apps.money.models import Account, Transaction
 
 from . import monobank
@@ -53,6 +54,8 @@ def refresh_accounts(connection, info):
         code = item.get("currencyCode")
         if code not in monobank.CURRENCIES:
             continue
+        limit = minor(item.get("creditLimit")) or Decimal("0")
+        balance = minor(item.get("balance"))
         mono_account, _created = MonobankAccount.objects.update_or_create(
             connection=connection,
             mono_id=item["id"],
@@ -60,7 +63,8 @@ def refresh_accounts(connection, info):
                 "is_jar": is_jar,
                 "title": title,
                 "currency": monobank.CURRENCIES[code],
-                "balance": minor(item.get("balance")),
+                "credit_limit": limit,
+                "balance": None if balance is None else balance - limit,
             },
         )
         reconcile(mono_account, mono_account.balance)
@@ -120,6 +124,59 @@ def make_transfer(partner, account):
     return partner
 
 
+CASH_MCC = {6010, 6011}
+TRANSFER_MCC = {4829, 6012, 6538, 6540}
+CASHBACK_WORDS = ("кешбек", "cashback", "кешбэк")
+REFUND_LOOKBACK = timedelta(days=120)
+
+
+def cash_account(household, membership, currency):
+    cash = household.accounts.filter(kind=Account.Kind.CASH, currency=currency, is_archived=False)
+    found = cash.filter(owner=membership).first() or cash.filter(owner__isnull=True).first() or cash.first()
+    if found:
+        return found
+    name = "Готівка" if currency == household.base_currency else f"Готівка {currency}"
+    return Account.objects.create(household=household, name=name, kind=Account.Kind.CASH, currency=currency, owner=membership)
+
+
+def bought_there_before(account, title, moment):
+    key = merchant_key(title)
+    if not key:
+        return False
+    recent = account.transactions.filter(
+        type=Transaction.Type.EXPENSE, amount__gt=0, occurred_at__gte=moment - REFUND_LOOKBACK
+    ).values_list("title", flat=True)[:500]
+    return any(merchant_key(other) == key for other in recent)
+
+
+def is_refund(account, item, moment):
+    mcc = item.get("mcc")
+    title = (item.get("description") or "").lower()
+    if mcc in TRANSFER_MCC or mcc in CASH_MCC or any(word in title for word in CASHBACK_WORDS):
+        return False
+    return mcc in MCC or bought_there_before(account, item.get("description") or "", moment)
+
+
+def withdraw_cash(mono_account, item, amount, moment):
+    account = mono_account.account
+    household = account.household
+    cash = cash_account(household, mono_account.connection.membership, account.currency)
+    Transaction.objects.create(
+        household=household,
+        type=Transaction.Type.TRANSFER,
+        date=timezone.localdate(moment),
+        occurred_at=moment,
+        title=item.get("description") or "Зняття готівки",
+        account=account,
+        to_account=cash,
+        amount=amount,
+        member=mono_account.connection.membership,
+        source=Transaction.Source.MONOBANK,
+        external_id=item["id"],
+    )
+    return TRANSFER
+
+
 def process_item(mono_account, item):
     account = mono_account.account
     household = account.household
@@ -132,11 +189,15 @@ def process_item(mono_account, item):
         return DUPLICATE
     if already_transferred(household, account, amount, kind, moment):
         return DUPLICATE
+    if kind == Transaction.Type.EXPENSE and item.get("mcc") in CASH_MCC:
+        return withdraw_cash(mono_account, item, amount, moment)
     partner = transfer_partner(household, account, amount, kind, moment)
     if partner:
         make_transfer(partner, account)
         return TRANSFER
-    _tx, status = ingest(
+    if kind == Transaction.Type.INCOME and is_refund(account, item, moment):
+        kind, amount = Transaction.Type.EXPENSE, -amount
+    tx, status = ingest(
         household,
         account=account,
         amount=amount,
@@ -149,6 +210,9 @@ def process_item(mono_account, item):
         mcc=item.get("mcc"),
         note=item.get("comment", ""),
     )
+    if status == CREATED and item.get("mcc") in TRANSFER_MCC and not tx.needs_review:
+        tx.needs_review = True
+        tx.save(update_fields=["needs_review"])
     return status
 
 
@@ -172,7 +236,7 @@ def sync_account(mono_account, now=None):
             results[process_item(mono_account, item)] += 1
         mono_account.synced_until = now
         if ordered and ordered[-1].get("balance") is not None:
-            mono_account.balance = minor(ordered[-1]["balance"])
+            mono_account.balance = mono_account.own_money(minor(ordered[-1]["balance"]))
         mono_account.save(update_fields=["synced_until", "balance"])
         reconcile(mono_account, mono_account.balance)
     return results
